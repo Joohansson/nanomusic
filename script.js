@@ -21,18 +21,18 @@ var chords = [["B1", "F#1", "F#2", "B2", "F#3", "B3", "D3", "A3", "D4", "E4", "A
 ["C#2", "F#2", "C#3", "F#3", "G#3", "A3", "C#4", "A4", "C#5"], ["F#1", "C#2", "F#2", "C#3", "F#3", "G#3", "A3", "B3", "C#4", "F#4"],
 ["E1", "A1", "E2", "A2", "C#3", "F#3", "G#3", "A3", "B3", "E4", "G#4", "B4", "E5"], ["D1", "A1", "D2", "A2", "F#3", "G#3", "A3", "E4", "A4", "E5"]]
 var current_notes = chords[0];
-//cyan, green, lime, amber, deep orange, red, pink, purple, indigo, light blue 
-var color_schemes = 
+//cyan, green, lime, amber, deep orange, red, pink, purple, indigo, light blue
+var color_schemes =
 [
-[0x006064, "0xe0f7fa", "0xb2ebf2", "0x80deea", "0x44d0e1", "0x26c6da", "0x00bcd4", "0x00acc1", "0x0097a7"], 
+[0x006064, "0xe0f7fa", "0xb2ebf2", "0x80deea", "0x44d0e1", "0x26c6da", "0x00bcd4", "0x00acc1", "0x0097a7"],
 [0x1b5e20, "0xe8f5e9", "0xc8e6c9", "0xa5d6a7", "0x81c784", "0x66bb6a", "0x4caf50", "0x43a047", "0x388e3c"],
-[0xf57f17, "0xfffde7", "0xfff9c4", "0xfff59d", "0xfff176", "0xffee58", "0xffeb3b", "0xfdd835", "0xfbc02d"], 
-[0xff6f00, "0xfff8e1", "0xffecb3", "0xffe082", "0xffd54f", "0xffca28", "0xffc107", "0xffb300", "0xffa000"], 
-[0xbf360c, "0xfbe9e7", "0xffccbc", "0xffab91", "0xff8a65", "0xff7043", "0xff5722", "0xf4511e", "0xe64a19"], 
-[0xb71c1c, "0xffebee", "0xffcdd2", "0xef9a9a", "0xe57373", "0xef5350", "0xff1744", "0xf44336", "0xd32f2f"], 
-[0x880e4f, "0xfce4ec", "0xf8bbd0", "0xf48fb1", "0xf06292", "0xf50057", "0xec407a", "0xe91e63", "0xe91e63"], 
-[0x4a148c, "0xf3e5f5", "0xe1bee7", "0xce93d8", "0xba68c8", "0xab47bc", "0xd500f9", "0x9c27b0", "0x7b1fa2"], 
-[0x1a237e, "0xe8eaf6", "0xc5cae9", "0x9fa8da", "0x7986cb", "0x5c6bc0", "0x3d5afe", "0x3f51b5", "0x303f9f"], 
+[0xf57f17, "0xfffde7", "0xfff9c4", "0xfff59d", "0xfff176", "0xffee58", "0xffeb3b", "0xfdd835", "0xfbc02d"],
+[0xff6f00, "0xfff8e1", "0xffecb3", "0xffe082", "0xffd54f", "0xffca28", "0xffc107", "0xffb300", "0xffa000"],
+[0xbf360c, "0xfbe9e7", "0xffccbc", "0xffab91", "0xff8a65", "0xff7043", "0xff5722", "0xf4511e", "0xe64a19"],
+[0xb71c1c, "0xffebee", "0xffcdd2", "0xef9a9a", "0xe57373", "0xef5350", "0xff1744", "0xf44336", "0xd32f2f"],
+[0x880e4f, "0xfce4ec", "0xf8bbd0", "0xf48fb1", "0xf06292", "0xf50057", "0xec407a", "0xe91e63", "0xe91e63"],
+[0x4a148c, "0xf3e5f5", "0xe1bee7", "0xce93d8", "0xba68c8", "0xab47bc", "0xd500f9", "0x9c27b0", "0x7b1fa2"],
+[0x1a237e, "0xe8eaf6", "0xc5cae9", "0x9fa8da", "0x7986cb", "0x5c6bc0", "0x3d5afe", "0x3f51b5", "0x303f9f"],
 [0x01579b, "0xe1f5fe", "0xb3e5fc", "0x81d4fa", "0x4fc3f7", "0x29b6f6", "0x00b0ff", "0x03a9f4", "0x0288d1"]
 ];
 var tick = 0,
@@ -141,8 +141,8 @@ reverb = new Tone.Freeverb(.95).toMaster();
 	noise.volume.value = -50;
 	//make an autofilter to shape the noise
 	autoFilter = new Tone.AutoFilter({
-		"frequency" : "7m", 
-		"min" : 7000, 
+		"frequency" : "7m",
+		"min" : 7000,
 		"max" : 17000
 	}).connect(reverb);
 
@@ -186,9 +186,9 @@ function init() {
     var t = e.getContext("2d");
     e = document.getElementById("canvas");
     //  document.getElementById("mute-button").addEventListener("click", function(e) {
-        
+
     //     mute_sound();
-        
+
     // });
     var l = document.getElementById("info")
       , h = document.getElementById("right")
@@ -221,7 +221,7 @@ function init() {
     window.addEventListener("resize", on_window_resize, !1);
 
 //  else
-//      renderer = new THREE.CanvasRenderer(); 
+//      renderer = new THREE.CanvasRenderer();
 	renderer.setClearColor(0x000000);
 	renderer.setPixelRatio( window.devicePixelRatio );
     renderer.setSize(window.innerWidth, window.innerHeight);
@@ -284,9 +284,15 @@ function init() {
 }
 
 function trigger_light(x, hasPitch, scale) {
+    if (!collected_blocks[blockSeq]) {
+      return
+    }
     var block_info = collected_blocks[blockSeq][2][x];
+    if (!block_info) {
+      return
+    }
     update_transaction_display(block_info);
-    
+
     var ran_cube = cubes.children[ (cubes.children.length - 1) -  x];
     var justCol = block_info[2].slice(7, block_info[2].length);
     var new_col = interpret_cube_color(justCol);
@@ -344,7 +350,7 @@ function interpret_amount_vel(val) {
 	}else if ((val >= 1000)) {
 		return .9;
 	}
-} 
+}
 
 function interpret_hash(hash) {
     //notes = ["A3", "Bb3", "C4", "D4", "Eb4", "F4", "G4", "Ab4", "Bb4", "C5", "Eb5", "G5"]
@@ -431,7 +437,7 @@ function define_content() {
     var amount_of_transactions = Math.floor(Math.random() * 17)
     // if (transactions.length > 127) {
     //     transactions.length = 127;
-    // } 
+    // }
     if (0) {
     	var one_info = [];
 		//one_info.push(this_tx.block_id);
@@ -481,10 +487,10 @@ function create_grid(content) {
     }
     var totalWidth =  fixedWidthOfOneUnit * transaxx;
     //var offset = (framedWidth - totalWidth) / transaxx;
-    var the_floor = ((totalWidth) * .5) - (fixedWidthOfOneUnit * .5); 
+    var the_floor = ((totalWidth) * .5) - (fixedWidthOfOneUnit * .5);
 
     var geometry = new THREE.BoxGeometry(fixedWidthOfOneUnit, window.innerHeight, 50);
-    for (var x = transaxx - 1; x > -1; x--) { 
+    for (var x = transaxx - 1; x > -1; x--) {
         material = new THREE.MeshBasicMaterial({
                     });
         material.color.setHex (0x00ffff);
@@ -503,23 +509,20 @@ function create_grid(content) {
 
 $(document).ready(function(){
 	var $start = document.querySelector('#play_button');
-	if(/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile|mobile|CriOS/i.test(navigator.userAgent)) {
-		//init();
-		$(".play_button").show();
-		$(".play_button").click(function(){
-			StartAudioContext(Tone.context, $start, () => { 
-				$start.remove()
-				console.debug('AUDIO READY') 
-			})
-			init();
-		})
-		console.log("mobile started");			
-	} else {
-		$(".play_button").hide();
-		console.log(" is not mobile ");
-		init();	
-	}
+  //attach a click listener to a play button
+  //document.querySelector('#start_btn').addEventListener('click', () => Tone.start())
 
+	//init();
+	$(".play_button").show();
+	$(".play_button").click(function(){
+    Tone.start()
+		StartAudioContext(Tone.context, $start, () => {
+			$start.remove()
+			console.debug('AUDIO READY')
+		})
+		init();
+	})
+	console.log("mobile started");
 });
 
 function render() {
@@ -551,9 +554,9 @@ function get_data() {
     // ajax.send(null);
     // ajax.onreadystatechange = function () {
 
-    //      if (ajax.readyState == 4 && (ajax.status == 200)) {          
+    //      if (ajax.readyState == 4 && (ajax.status == 200)) {
     //         var Data = JSON.parse(ajax.responseText);
-            
+
     //         curBlockID = Data.data[0].count
     //         prior_block_id = curBlockID
     //         last_block_played = curBlockID - 1;
@@ -575,7 +578,7 @@ function get_first_block() {
     define_content();
     prior_block_id = block_num;
     // ajax.onreadystatechange = function () {
-    //     if (ajax.readyState == 4 && (ajax.status == 200)) {    
+    //     if (ajax.readyState == 4 && (ajax.status == 200)) {
     //         var block = JSON.parse(ajax.responseText);
     //         if (block.data.length == 0) {
     //             get_first_block(block_num - 1);
@@ -584,7 +587,7 @@ function get_first_block() {
     //             prior_block_id = block_num;
     //             //prior_block_id = block_num
     //         }
-    //     } else {        
+    //     } else {
     //     }
     // }
 }
@@ -601,7 +604,7 @@ function get_new_block() {
     // // ajax.send(null)
     // ajax.onreadystatechange = function () {
     //     if (ajax.readyState == 4 && (ajax.status == 200)) {
-                        
+
     //         var block = JSON.parse(ajax.responseText);
     //         if (block.data.length === 0) {
     //             define_content(block.data, true);
@@ -611,7 +614,7 @@ function get_new_block() {
     //             define_content(block.data, false);
     //             //prior_block_id = block_num
     //         }
-    //     } else {         
+    //     } else {
     //     }
     // }
 }
@@ -628,12 +631,12 @@ function update_data() {
     //         curBlockID = Data.data[0].count;
     //         if (curBlockID != prior_block_id) {
     //         	for (var bb = (curBlockID-prior_block_id) - 1; bb > -1; bb-- ) {
-    //         		get_new_block(curBlockID - bb);	
+    //         		get_new_block(curBlockID - bb);
     //         	}
 				// prior_block_id = curBlockID;
     //             //fill new block with transaction
-    //         } 
-    //     } 
+    //         }
+    //     }
     // }
 }
 
@@ -657,7 +660,7 @@ function schedule_next(){
 	} else {
 		trigger_light(xCount, false, 1);
 	}
-	
+
 	if (xCount  < collected_blocks[blockSeq][0].length-1) {
 		//schedule the next event relative to the current time by prefixing "+"
 		Tone.Transport.scheduleOnce(schedule_next, ("+" + b));
@@ -678,16 +681,16 @@ function count_to_ten() {
 
 function check_for_new_content() {
 	if (collected_blocks[blockSeq] !== undefined) {
-		if (collected_blocks[blockSeq][0].length > 0) {			
+		if (collected_blocks[blockSeq][0].length > 0) {
 			count_to_ten();
 			update_current_notes(newN);
 			xCount = 0;
 			create_grid(collected_blocks[blockSeq]);
-			
+
 			Tone.Transport.scheduleOnce(schedule_next, ("+1m"));
 		} else {
 			update_transaction_display(collected_blocks[blockSeq][2][0]);
-			blockSeq++;	
+			blockSeq++;
 			Tone.Transport.scheduleOnce(check_for_new_content, ("+1m"));
 		}
 	} else {
@@ -699,7 +702,7 @@ function check_for_new_content() {
 function play_note(n, b, v, s, x) {
 	var note = new Tone.Event(function(b, n){
 		synth.triggerAttackRelease(n, "4n", b, .5);
-		trigger_light(x, true,s); 
+		trigger_light(x, true,s);
 	}, n).start(Tone.now());
 }
 
@@ -718,15 +721,17 @@ setInterval(function() {
 // 	if (fade) {
 // 		conga.volume.rampTo(-100, 4);
 //     } else {
-//     	conga.volume.rampTo(-20, 4);    
+//     	conga.volume.rampTo(-20, 4);
 //     }
 //     fade = !fade;
 // }
 
 function update_transaction_display(block_info){
+  if (block_info) {
     document.getElementById("currentAmount").innerHTML = block_info[2];
     //document.getElementById("currentTransaction").innerHTML = "TRANSACTION ID: " + block_info[1];
-    document.getElementById("currentBlock").innerHTML = "BLOCK: " + block_info[0];   
+    document.getElementById("currentBlock").innerHTML = "BLOCK: " + block_info[0];
+  }
 }
 
 
@@ -742,12 +747,12 @@ var mode = function mode(arr) {
 };
 
 function add(string) {
-    string = string.split('');             
-    var nums = [];                      
-    for (var i = 0; i < string.length; i++) {  
-        nums[i] =  parseInt(string[i],10);     
+    string = string.split('');
+    var nums = [];
+    for (var i = 0; i < string.length; i++) {
+        nums[i] =  parseInt(string[i],10);
     }
-    return nums;                             
+    return nums;
 }
 
 function SetToZero() {
