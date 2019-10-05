@@ -30,6 +30,7 @@
 		this._bindedMove = this._moved.bind(this)
 		this._bindedEnd = this._ended.bind(this, context)
 
+		element.addEventListener("touchstart", this._bindedEnd)
 		element.addEventListener("touchmove", this._bindedMove)
 		element.addEventListener("touchend", this._bindedEnd)
 		element.addEventListener("mouseup", this._bindedEnd)
@@ -56,6 +57,7 @@
 	 * remove all the bound events
 	 */
 	TapListener.prototype.dispose = function(){
+		this._element.removeEventListener("touchstart", this._bindedEnd)
 		this._element.removeEventListener("touchmove", this._bindedMove)
 		this._element.removeEventListener("touchend", this._bindedEnd)
 		this._element.removeEventListener("mouseup", this._bindedEnd)
@@ -144,9 +146,11 @@
 
 	/**
 	 * @param {AudioContext} context The AudioContext to start.
-	 * @param {Array|String|Element|jQuery} elements For iOS, the list of elements
+	 * @param {Array|String|Element|jQuery=} elements For iOS, the list of elements
 	 *                                               to bind tap event listeners
-	 *                                               which will start the AudioContext.
+	 *                                               which will start the AudioContext. If
+	 *                                               no elements are given, it will bind
+	 *                                               to the document.body.
 	 * @param {Function=} callback The callback to invoke when the AudioContext is started.
 	 * @return {Promise} The promise is invoked when the AudioContext
 	 *                       is started.
@@ -162,9 +166,10 @@
 		var tapListeners = []
 
 		// add all the tap listeners
-		if (elements){
-			bindTapListener(elements, tapListeners, context)
+		if (!elements){
+			elements = document.body
 		}
+		bindTapListener(elements, tapListeners, context)
 
 		//dispose all these tap listeners when the context is started
 		promise.then(function(){
