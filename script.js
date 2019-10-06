@@ -14,8 +14,13 @@ var clock = new THREE.Clock();
 var special_colors = ["0xff1744", "0xf50057", "0xd500f9", "0xff3d00"];
 var notes = ["C2", "D#2", "F2", "Ab2", "Ab3", "G3", "C4", "Bb3", "F3", "D4", "Eb4"];
 // var chords = [ ["C2", "F2", "Ab2", "C4"], ["Eb3", "G3", "Ab4", "G2"], ["F2", "Bb3", "F3", "D4"], ["G2", "Bb3", "C4", "Eb4"] ];
-const urlNano = "wss://beta.ws.nanocrawler.cc";
-const socketNano = new WebSocket(urlNano);
+const urlNanoMain = "wss://ws.nanocrawler.cc";
+const urlNanoBeta = "wss://beta.ws.nanocrawler.cc";
+
+const socketNanoMain = new WebSocket(urlNanoMain);
+const socketNanoBeta = new WebSocket(urlNanoBeta);
+var netSelected = 0; //0=main, 1=beta
+
 var transactions = [];
 
 var chords = [["B1", "F#1", "F#2", "B2", "F#3", "B3", "D3", "A3", "D4", "E4", "A4", "D5"], ["B2", "F#2", "B3", "F#3", "D2", "E2", "A2", "D3", "E3", "A3", "D4"],
@@ -157,7 +162,7 @@ reverb = new Tone.Freeverb(.95).toMaster();
 
 
 function update_current_notes(xx) {
-	console.log(chords[xx]);
+	//console.log(chords[xx]);
 	current_notes = chords[xx];
 	current_colors = color_schemes[xx];
 }
@@ -191,29 +196,14 @@ function init() {
     //     mute_sound();
 
     // });
-    var l = document.getElementById("info")
-      , h = document.getElementById("right")
-      , g = document.getElementById("address");
-    document.getElementById("info-button").addEventListener("click", function(e) {
-        return e.preventDefault(),
-        l.classList.toggle("hidden"),
-        h.classList.toggle("hidden"),
-        g.classList.toggle("hidden"),
-        !1
-    }),
-    document.getElementById("close-button").addEventListener("click", function(e) {
-        return e.preventDefault(),
-        l.classList.toggle("hidden"),
-        h.classList.toggle("hidden"),
-        g.classList.toggle("hidden"),
-        !1
-    });
+
     for (var p = document.getElementById("address-info"), b = document.getElementsByClassName("address-button"), E = 0; E < b.length; E++)
         b[E].addEventListener("click", function(e) {
             return e.preventDefault(),
             p.classList.toggle("hidden"),
             !1
         });
+
     document.getElementById("close-address-button").addEventListener("click", function(e) {
         return e.preventDefault(),
         p.classList.toggle("hidden"),
@@ -430,8 +420,9 @@ function write_to_dic(mel, beats, info, vel, scale) {
     collected_blocks.push(arr);
 }
 
+// create melody of transactions in the buffer
 function define_content() {
-    console.log("New content: " + transactions.length)
+    console.log("Buffer length: " + transactions.length)
     var new_melody = [];
     var new_beats = [];
     var new_velocity = [];
@@ -439,36 +430,30 @@ function define_content() {
     var transaction_info = [];
     var block_num = 0
 
-    //var amount_of_transactions = Math.floor(Math.random() * 17)
-    if (transactions.length > 127) {
-        transactions.length = 127;
+    // pop old values if longer than 127
+    while (transactions.length > 127) {
+      transactions.shift()
     }
+    console.log("Melody length: " + transactions.length)
+
     if (transactions.length == 0) {
     	var one_info = [];
 		    //one_info.push(this_tx.block_id);
-		    one_info.push(Math.floor(Math.random() * 856000));
+		    one_info.push(0);
         one_info.push("");
         one_info.push("Empty block...");
         transaction_info.push(one_info);
-        console.log("One")
     } else {
     	for (var xx = 0; xx < transactions.length; xx++ ) {
 	        var one_info = [];
 	        this_tx = transactions[xx];
-          /*
-	        var amount;
-	        if (Math.random() < .15) {
-	        	amount = 0;
-	        } else {
-	        	amount = Math.random() * 6600;
-	        }
-         */
+
  	        var amount =  this_tx.amount;
 	        one_info.push(block_num);
 	        one_info.push("");
 	        one_info.push("AMOUNT: " + amount.toFixed(4));
 	        transaction_info.push(one_info);
-	        if (amount == 0) {
+	        if (this_tx.amount == 0) {
 	            new_melody.push('C7');
 	            new_beats.push("4n");
 	            new_velocity.push(0);
@@ -477,20 +462,12 @@ function define_content() {
 	            new_beats.push(interpret_amount_beat(amount));
 	            new_melody.push(interpret_hash(this_tx.hash));
 	            //new_melody.push(interpret_amount_note(amount));
-	            console.log(new_melody[new_melody.length-1] + " , " + amount);
 	            new_velocity.push(interpret_amount_vel(amount));
 	            new_scale.push(interpret_amount_scale(amount));
 	        }
     	}
     }
-    /*
-    new_beats.push(interpret_amount_beat(this_tx.amount));
-    new_melody.push(interpret_hash(this_tx.hash));
-    //new_melody.push(interpret_amount_note(amount));
-    console.log(interpret_amount_note(this_tx.amount) + " , " + this_tx.amount);
-    new_velocity.push(interpret_amount_vel(this_tx.amount));
-    new_scale.push(interpret_amount_scale(this_tx.amount));
-    */
+    // play the melody
     write_to_dic(new_melody, new_beats, transaction_info, new_velocity, new_scale);
 }
 
@@ -522,9 +499,30 @@ function create_grid(content) {
     }
 }
 
-
 $(document).ready(function(){
 	var $start = document.querySelector('#play_button');
+
+  document.getElementById("net-switch").addEventListener('change', (event) => {
+      if (event.target.checked) {
+          netSelected = 1;
+      } else {
+          netSelected = 0;
+      }
+      transactions = [] // reset block buffer
+  });
+
+  document.getElementById("info-button").addEventListener("click", function(e) {
+      var l = document.getElementById("info");
+      return e.preventDefault(),
+      l.classList.toggle("hidden"),
+      !1
+  }),
+  document.getElementById("close-button").addEventListener("click", function(e) {
+      var l = document.getElementById("info");
+      return e.preventDefault(),
+      l.classList.toggle("hidden"),
+      !1
+  });
 
 	//init();
 	$(".play_button").show();
@@ -536,7 +534,6 @@ $(document).ready(function(){
 		})
 		init();
 	})
-	console.log("mobile started");
 });
 
 function render() {
@@ -574,7 +571,7 @@ function schedule_next(){
 	var v = collected_blocks[blockSeq][3][xCount];
 	var s = collected_blocks[blockSeq][4][xCount];
 	if (n !== "C7") {
-		console.log(n, b, v);
+		//console.log(n, b, v);
 		play_note(n,b,v, s, xCount);
 	} else {
 		trigger_light(xCount, false, 1);
@@ -631,16 +628,23 @@ setInterval(function() {
 }, 5000);
 
 // connect to sockets
-socketNano.onopen = ()=>{
-	socketNano.send(JSON.stringify({
+socketNanoMain.onopen = ()=>{
+	socketNanoMain.send(JSON.stringify({
     event: "subscribe",
     data: ["all"]
   }));
 }
 
-// receive websocket information
-socketNano.onmessage = (onmsg) =>{
-	let res = JSON.parse(onmsg.data);
+socketNanoBeta.onopen = ()=>{
+	socketNanoBeta.send(JSON.stringify({
+    event: "subscribe",
+    data: ["all"]
+  }));
+}
+
+// read data from websocket callback
+function processSocket(data) {
+  let res = JSON.parse(data);
 
 	var txData = {
 		"account": [res.data.account],
@@ -651,13 +655,31 @@ socketNano.onmessage = (onmsg) =>{
 
 	//console.log(txData);
   //define_content(txData)
-  transactions.push(txData)
+  transactions.push(txData);
   document.getElementById("currentHash").innerHTML = "Latest hash: " + txData.hash;
   document.getElementById("currentAmount").innerHTML = "Latest amount: " + txData.amount;
 }
 
+// receive websocket information
+socketNanoMain.onmessage = (onmsg) =>{
+  if (netSelected == 0) {
+    processSocket(onmsg.data);
+  }
+}
+
+// receive websocket information
+socketNanoBeta.onmessage = (onmsg) =>{
+  if (netSelected == 1) {
+    processSocket(onmsg.data);
+  }
+}
+
 // webSocket error
-socketNano.onerror = (onerr) =>{
+socketNanoMain.onerror = (onerr) =>{
+	console.log(onerr);
+}
+
+socketNanoBeta.onerror = (onerr) =>{
 	console.log(onerr);
 }
 

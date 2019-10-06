@@ -19,37 +19,30 @@ canvas {
   top:0;
   left:0;
   pointer-events:auto;
+  z-index: -1000;
 }
 
-#title { position: absolute;
-  left: 20px;
-  top: 20px;
-  right: 20px;
-  line-height: 1.1em;
-  /*text-shadow: 0 1px 0 rgba(0,0,0,.4);*/
+#container {
+  background: rgba(0,0,0,0.25);
+  padding: 5px
 }
 
-#right{
-  position: absolute;
-  text-align:right;
-  left: 0;
-  top: 0;
+.info-container {
+  margin: 10px 0 0 10px;
 }
 
-#right p, #right h4 {
-  text-align: left;
+.switch-container {
+  margin: 10px 0 0 10px;
+  font-weight: bold;
 }
 
-/*#right a {
-  color: white;
-  opacity: .75;
-  transition: opacity 150ms ease-out;
-  padding: 10px 20px;
-  border: 1px solid white;
-  line-height: 45px;
+.switch-container span {
+  font-size: 15px;
+  line-height: 15px;
+  vertical-align: -webkit-baseline-middle;
 }
-*/
-#right a:hover,
+
+#info-container a:hover,
 #close-button {
   text-decoration: none;
 }
@@ -83,6 +76,7 @@ canvas {
   left: 50%;
   margin: -128px 0 0 -128px;
   background-image: url("play_button.png");
+  cursor: pointer;
 }
 
 /*#key {
@@ -250,3 +244,72 @@ and (max-width : 640px){
   border: none!important;
   line-height: 12px!important;
 }
+
+/*----Slider-----*/
+#filter-span {
+  margin-left: 20px;
+}
+
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 40px;
+  height: 21px;
+  margin-left: 5px;
+  margin-right: 5px;
+}
+
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  -webkit-transition: .4s;
+  transition: .4s;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 15px;
+  width: 15px;
+  left: 4px;
+  bottom: 3px;
+  background-color: white;
+  -webkit-transition: .4s;
+  transition: .4s;
+}
+
+input:checked + .slider {
+  background-color: #2196F3;
+}
+
+input:focus + .slider {
+  box-shadow: 0 0 1px #2196F3;
+}
+
+input:checked + .slider:before {
+  -webkit-transform: translateX(17px);
+  -ms-transform: translateX(17px);
+  transform: translateX(17px);
+}
+
+/* Rounded sliders */
+.slider.round {
+  border-radius: 12px;
+}
+
+.slider.round:before {
+  border-radius: 50%;
+}
+
+/* ----End Slider----*/

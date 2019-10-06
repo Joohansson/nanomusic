@@ -57,13 +57,18 @@
       </div>
     </div>
 
-    <div id="title">
-      <div id="logo"></div>
-      <div id="right">
-        <p id ="currentTransaction"><a href="index.html#" id="info-button"><u>ABOUT</u></a></p>
-        <p id = "currentHash"></p>
-        <p id = "currentAmount"></p>
-      </div>
+    <div class="switch-container">
+      <span>Main Net</span>
+      <label class="switch">
+        <input type="checkbox" id="net-switch" name="chart-switch">
+        <span class="slider round"></span>
+      </label>
+      <span>Beta Net</span>
+    </div>
+    <div class="info-container">
+      <p><a href="index.html#" id="info-button"><u>ABOUT</u></a></p>
+      <p id = "currentHash"></p>
+      <p id = "currentAmount"></p>
     </div>
 
     <div id="play_button" class="play_button">
