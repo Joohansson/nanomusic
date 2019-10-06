@@ -124,17 +124,17 @@ reverb = new Tone.Freeverb(.95).toMaster();
 	        "releaseCurve" : "exponential"
 	    }
 	});
-	polySynth.volume.value = -50;
+	polySynth.volume.value = -55;
 
 	var loop2 = new Tone.Loop(function(time){
-	    polySynth.triggerAttackRelease(current_notes[Math.floor(Math.random() * (current_notes.length - 5))], "3m");
+	    polySynth.triggerAttackRelease(current_notes[Math.floor(Math.random() * (current_notes.length - 5))], "1m");
 	}, beat_lengths[Math.floor(Math.random() * beat_lengths.length)]).start();
 	conga = new Tone.MembraneSynth({
-	    "pitchDecay" : 0.008,
-	    "octaves" : 2,
+	    "pitchDecay" : 0.004,
+	    "octaves" : 4,
 	    "envelope" : {
-	        "attack" : 0.0006,
-	        "decay" : 0.5,
+	        "attack" : 0.0005,
+	        "decay" : 0.4,
 	        "sustain" : 0
 	    }
 	}).connect(feedbackDelay);
@@ -144,12 +144,12 @@ reverb = new Tone.Freeverb(.95).toMaster();
 	// }, ["D1"], "2n").start(0);
 
 	noise = new Tone.Noise("white").start();
-	noise.volume.value = -50;
+	noise.volume.value = -45;
 	//make an autofilter to shape the noise
 	autoFilter = new Tone.AutoFilter({
-		"frequency" : "7m",
-		"min" : 7000,
-		"max" : 17000
+		"frequency" : "20m",
+		"min" : 300,
+		"max" : 1000
 	}).connect(reverb);
 
 	//connect the noise
@@ -313,32 +313,32 @@ function create_step_function(numSteps) {
 
 function interpret_amount_beat(val) {
 	if (val < .25) {
+		return "32n";
+	} else if ((val >= .01) && (val < 0.1)) {
+		return "16n";
+	} else if ((val >= 0.1) && (val < 1)) {
 		return "8n";
-	} else if ((val >= .25) && (val < 1)) {
-		return "4n";
 	} else if ((val >= 1) && (val < 10)) {
-		return "2n";
+		return "4n";
 	} else if ((val >= 10) && (val < 100)) {
-		return "1n";
-	} else if ((val >= 100) && (val < 1000)) {
-		return "2m";
-	}else if ((val >= 1000)) {
-		return "1m";
+		return "8m";
+	}else if ((val >= 100)) {
+		return "4m";
 	}
 }
 
 function interpret_amount_vel(val) {
-	if (val < .25) {
+	if (val < .05) {
 		return .3;
-	} else if ((val >= .25) && (val < 1)) {
+	} else if ((val >= .01) && (val < 0.1)) {
 		return .4;
-	} else if ((val >= 1) && (val < 10)) {
+	} else if ((val >= 0.1) && (val < 1)) {
 		return .5;
-	} else if ((val >= 10) && (val < 100)) {
+	} else if ((val >= 1) && (val < 10)) {
 		return .65;
-	} else if ((val >= 100) && (val < 1000)) {
+	} else if ((val >= 10) && (val < 100)) {
 		return .8;
-	}else if ((val >= 1000)) {
+	}else if ((val >= 100)) {
 		return .9;
 	}
 }
@@ -375,35 +375,35 @@ function interpret_amount_note(val){
 }
 
 function interpret_cube_color(val){
-	if (val < .25) {
+	if (val < .01) {
 		return current_colors[0];
-	} else if ((val >= .25) && (val < 1)) {
+	} else if ((val >= .001) && (val < 0.01)) {
 		return current_colors[1];
-	} else if ((val >= 1) && (val < 10)) {
+	} else if ((val >= 0.01) && (val < 0.1)) {
 		return current_colors[2];
-	} else if ((val >= 10) && (val < 100)) {
+	} else if ((val >= 0.1) && (val < 1)) {
 		return current_colors[3];
-	} else if ((val >= 100) && (val < 500)) {
+	} else if ((val >= 1) && (val < 10)) {
 		return current_colors[4];
-	} else if ((val >= 500) && (val < 1000)) {
+	} else if ((val >= 10) && (val < 100)) {
 		return current_colors[5];
-	}else if ((val >= 1000) && (val < 5000)) {
+	}else if ((val >= 100) && (val < 1000)) {
 		return current_colors[6];
-	}else if ((val >= 5000) && (val < 10000)) {
+	}else if ((val >= 1000) && (val < 5000)) {
 		return current_colors[7];
-	}else if ((val >= 10000)) {
+	}else if ((val >= 5000)) {
 		return current_colors[8];
 	}
 }
 
 function interpret_amount_scale(val){
-	if (val < .25) {
+	if (val < .01) {
 		return 1.1;
-	} else if ((val >= .25) && (val < 1)) {
+	} else if ((val >= .01) && (val < 0.1)) {
 		return 3;
-	} else if ((val >= 1) && (val < 50)) {
+	} else if ((val >= 0.1) && (val < 10)) {
 		return 9;
-	} else if ((val >= 50) && (val < 1000)) {
+	} else if ((val >= 10) && (val < 1000)) {
 		return 12;
 	} else if ((val >= 1000)) {
 		return 22;
@@ -431,7 +431,7 @@ function define_content() {
     var block_num = 0
 
     // pop old values if longer than 127
-    while (transactions.length > 127) {
+    while (transactions.length > 50) {
       transactions.shift()
     }
     console.log("Melody length: " + transactions.length)
@@ -468,6 +468,7 @@ function define_content() {
     	}
     }
     // play the melody
+    console.log(new_melody)
     write_to_dic(new_melody, new_beats, transaction_info, new_velocity, new_scale);
 }
 
