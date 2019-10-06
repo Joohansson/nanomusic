@@ -653,6 +653,7 @@ socketNano.onmessage = (onmsg) =>{
   //define_content(txData)
   transactions.push(txData)
   document.getElementById("currentHash").innerHTML = "Latest hash: " + txData.hash;
+  document.getElementById("currentAmount").innerHTML = "Latest amount: " + txData.amount;
 }
 
 // webSocket error
