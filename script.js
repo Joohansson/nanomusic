@@ -14,6 +14,9 @@ var clock = new THREE.Clock();
 var special_colors = ["0xff1744", "0xf50057", "0xd500f9", "0xff3d00"];
 var notes = ["C2", "D#2", "F2", "Ab2", "Ab3", "G3", "C4", "Bb3", "F3", "D4", "Eb4"];
 // var chords = [ ["C2", "F2", "Ab2", "C4"], ["Eb3", "G3", "Ab4", "G2"], ["F2", "Bb3", "F3", "D4"], ["G2", "Bb3", "C4", "Eb4"] ];
+const urlNano = "wss://beta.ws.nanocrawler.cc";
+const socketNano = new WebSocket(urlNano);
+var transactions = [];
 
 var chords = [["B1", "F#1", "F#2", "B2", "F#3", "B3", "D3", "A3", "D4", "E4", "A4", "D5"], ["B2", "F#2", "B3", "F#3", "D2", "E2", "A2", "D3", "E3", "A3", "D4"],
 ["D2", "F#2", "D3", "F#3", "D2", "E2","F#2", "A2", "E3", "A3", "E4" ], ["F#2", "C#2", "F#3", "C#3", "E3", "F#3", "A3", "B3", "C#3", "E4", "A4", "B4", "E5"],
@@ -53,8 +56,6 @@ var tick = 0,
 
 // mainGain.gain.exponentialRampToValueAtTime(.1, context.currentTime + 1);
 //     mainGain.gain.value = .1;
-
-
 
 function mute_sound() {
     mute != mute;
@@ -291,7 +292,7 @@ function trigger_light(x, hasPitch, scale) {
     if (!block_info) {
       return
     }
-    update_transaction_display(block_info);
+    //update_transaction_display(block_info);
 
     var ran_cube = cubes.children[ (cubes.children.length - 1) -  x];
     var justCol = block_info[2].slice(7, block_info[2].length);
@@ -353,10 +354,11 @@ function interpret_amount_vel(val) {
 }
 
 function interpret_hash(hash) {
-    //notes = ["A3", "Bb3", "C4", "D4", "Eb4", "F4", "G4", "Ab4", "Bb4", "C5", "Eb5", "G5"]
-    // num_hash = hash.replace(/\D/g,'');
-    // num = mode(add(num_hash));
-    num = Math.floor(Math.random() * notes.length)
+    notes = ["A3", "Bb3", "C4", "D4", "Eb4", "F4", "G4", "Ab4", "Bb4", "C5", "Eb5", "G5"]
+    num_hash = hash.replace(/\D/g,'');
+    num = mode(add(num_hash));
+    //num = Math.floor(Math.random() * notes.length)
+    //console.log("Hashnote: " + num)
     return notes[num]
 }
 
@@ -429,33 +431,39 @@ function write_to_dic(mel, beats, info, vel, scale) {
 }
 
 function define_content() {
+    console.log("New content: " + transactions.length)
     var new_melody = [];
     var new_beats = [];
     var new_velocity = [];
     var new_scale = [];
     var transaction_info = [];
-    var amount_of_transactions = Math.floor(Math.random() * 17)
-    // if (transactions.length > 127) {
-    //     transactions.length = 127;
-    // }
-    if (0) {
+    var block_num = 0
+
+    //var amount_of_transactions = Math.floor(Math.random() * 17)
+    if (transactions.length > 127) {
+        transactions.length = 127;
+    }
+    if (transactions.length == 0) {
     	var one_info = [];
-		//one_info.push(this_tx.block_id);
-		one_info.push(Math.floor(Math.random() * 856000));
+		    //one_info.push(this_tx.block_id);
+		    one_info.push(Math.floor(Math.random() * 856000));
         one_info.push("");
         one_info.push("Empty block...");
         transaction_info.push(one_info);
+        console.log("One")
     } else {
-    	for (var xx = 0; xx < amount_of_transactions; xx++ ) {
+    	for (var xx = 0; xx < transactions.length; xx++ ) {
 	        var one_info = [];
-	        //this_tx = transactions[xx];
+	        this_tx = transactions[xx];
+          /*
 	        var amount;
 	        if (Math.random() < .15) {
 	        	amount = 0;
 	        } else {
 	        	amount = Math.random() * 6600;
 	        }
- 	       // var amount = this_tx.amount / 1000000000000000000;
+         */
+ 	        var amount =  this_tx.amount;
 	        one_info.push(block_num);
 	        one_info.push("");
 	        one_info.push("AMOUNT: " + amount.toFixed(4));
@@ -467,14 +475,22 @@ function define_content() {
 	            //newMelody.push(["4n", null]);
 	        } else {
 	            new_beats.push(interpret_amount_beat(amount));
-	            //newMelody.push(interpret_hash(this_tx.hash));
-	            new_melody.push(interpret_amount_note(amount));
-	            console.log(interpret_amount_note(amount) + " , " + amount);
+	            new_melody.push(interpret_hash(this_tx.hash));
+	            //new_melody.push(interpret_amount_note(amount));
+	            console.log(new_melody[new_melody.length-1] + " , " + amount);
 	            new_velocity.push(interpret_amount_vel(amount));
 	            new_scale.push(interpret_amount_scale(amount));
 	        }
     	}
     }
+    /*
+    new_beats.push(interpret_amount_beat(this_tx.amount));
+    new_melody.push(interpret_hash(this_tx.hash));
+    //new_melody.push(interpret_amount_note(amount));
+    console.log(interpret_amount_note(this_tx.amount) + " , " + this_tx.amount);
+    new_velocity.push(interpret_amount_vel(this_tx.amount));
+    new_scale.push(interpret_amount_scale(this_tx.amount));
+    */
     write_to_dic(new_melody, new_beats, transaction_info, new_velocity, new_scale);
 }
 
@@ -509,8 +525,6 @@ function create_grid(content) {
 
 $(document).ready(function(){
 	var $start = document.querySelector('#play_button');
-  //attach a click listener to a play button
-  //document.querySelector('#start_btn').addEventListener('click', () => Tone.start())
 
 	//init();
 	$(".play_button").show();
@@ -545,101 +559,6 @@ function on_window_resize() {
     renderer.setSize( window.innerWidth, window.innerHeight );
 
 }
-
-function get_data() {
-    // var url = "https://etherchain.org/api/blocks/count"
-
-    // var ajax = new XMLHttpRequest();
-    // ajax.open("GET", url, true);
-    // ajax.send(null);
-    // ajax.onreadystatechange = function () {
-
-    //      if (ajax.readyState == 4 && (ajax.status == 200)) {
-    //         var Data = JSON.parse(ajax.responseText);
-
-    //         curBlockID = Data.data[0].count
-    //         prior_block_id = curBlockID
-    //         last_block_played = curBlockID - 1;
-    //         get_first_block(curBlockID)
-    //     } else {
-
-    //     }
-    // }
-}
-
-//get_data();
-
-function get_first_block() {
-    // var url = "https://etherchain.org/api/block/" + block_num + "/tx"
-    // var ajax =new XMLHttpRequest()
-    // ajax.open("GET", url, true)
-    // ajax.send(null
-    block_num = Math.floor(Math.random() * 100000)
-    define_content();
-    prior_block_id = block_num;
-    // ajax.onreadystatechange = function () {
-    //     if (ajax.readyState == 4 && (ajax.status == 200)) {
-    //         var block = JSON.parse(ajax.responseText);
-    //         if (block.data.length == 0) {
-    //             get_first_block(block_num - 1);
-    //         } else {
-    //             define_content(block.data, false);
-    //             prior_block_id = block_num;
-    //             //prior_block_id = block_num
-    //         }
-    //     } else {
-    //     }
-    // }
-}
-
-get_first_block();
-
-function get_new_block() {
-	block_num++;
-	define_content();
-    prior_block_id = block_num;
-    // var url = "https://etherchain.org/api/block/" + block_num + "/tx"
-    // var ajax =new XMLHttpRequest()
-    // ajax.open("GET", url, true)
-    // // ajax.send(null)
-    // ajax.onreadystatechange = function () {
-    //     if (ajax.readyState == 4 && (ajax.status == 200)) {
-
-    //         var block = JSON.parse(ajax.responseText);
-    //         if (block.data.length === 0) {
-    //             define_content(block.data, true);
-    //             //play empty block chord
-    //             //change color or something
-    //         } else {
-    //             define_content(block.data, false);
-    //             //prior_block_id = block_num
-    //         }
-    //     } else {
-    //     }
-    // }
-}
-
-function update_data() {
-	get_new_block();
-    // var url = "https://etherchain.org/api/blocks/count";
-    // var ajax = new XMLHttpRequest();
-    // ajax.open("GET", url, true);
-    // ajax.send(null);
-    // ajax.onreadystatechange = function () {
-    //      if (ajax.readyState == 4 && (ajax.status == 200)) {
-    //         var Data = JSON.parse(ajax.responseText);
-    //         curBlockID = Data.data[0].count;
-    //         if (curBlockID != prior_block_id) {
-    //         	for (var bb = (curBlockID-prior_block_id) - 1; bb > -1; bb-- ) {
-    //         		get_new_block(curBlockID - bb);
-    //         	}
-				// prior_block_id = curBlockID;
-    //             //fill new block with transaction
-    //         }
-    //     }
-    // }
-}
-
 
 //setInterval(update_data(), delay)
 var blockSeq = 0;
@@ -689,7 +608,7 @@ function check_for_new_content() {
 
 			Tone.Transport.scheduleOnce(schedule_next, ("+1m"));
 		} else {
-			update_transaction_display(collected_blocks[blockSeq][2][0]);
+			//update_transaction_display(collected_blocks[blockSeq][2][0]);
 			blockSeq++;
 			Tone.Transport.scheduleOnce(check_for_new_content, ("+1m"));
 		}
@@ -708,8 +627,38 @@ function play_note(n, b, v, s, x) {
 
 
 setInterval(function() {
-    update_data();
-}, 30000);
+    define_content();
+}, 5000);
+
+// connect to sockets
+socketNano.onopen = ()=>{
+	socketNano.send(JSON.stringify({
+    event: "subscribe",
+    data: ["all"]
+  }));
+}
+
+// receive websocket information
+socketNano.onmessage = (onmsg) =>{
+	let res = JSON.parse(onmsg.data);
+
+	var txData = {
+		"account": [res.data.account],
+		"hash": res.data.hash,
+		"amount": (res.data.amount / 1000000000000000000000000000000),
+    "subtype": res.data.subtype
+	}
+
+	//console.log(txData);
+  //define_content(txData)
+  transactions.push(txData)
+  document.getElementById("currentHash").innerHTML = "Latest hash: " + txData.hash;
+}
+
+// webSocket error
+socketNano.onerror = (onerr) =>{
+	console.log(onerr);
+}
 
 // var fade = false;
 // setInterval(function(){
@@ -728,9 +677,7 @@ setInterval(function() {
 
 function update_transaction_display(block_info){
   if (block_info) {
-    document.getElementById("currentAmount").innerHTML = block_info[2];
-    //document.getElementById("currentTransaction").innerHTML = "TRANSACTION ID: " + block_info[1];
-    document.getElementById("currentBlock").innerHTML = "BLOCK: " + block_info[0];
+    //document.getElementById("currentAmount").innerHTML = block_info[2];
   }
 }
 
