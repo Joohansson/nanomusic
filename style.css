@@ -125,6 +125,17 @@ canvas {
   cursor: pointer;
 }
 
+.floating-text a {
+  color: #000 !important;
+  font-weight: bold !important;
+  font-family: "verdana" !important;
+}
+
+.floating-text a:hover {
+  color: #222 !important;
+  text-decoration: underline !important;
+}
+
 /*#key {
   width:200px;
 }*/

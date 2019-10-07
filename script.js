@@ -14,15 +14,19 @@ var clock = new THREE.Clock();
 var special_colors = ["0xff1744", "0xf50057", "0xd500f9", "0xff3d00"];
 var notes = ["C2", "D#2", "F2", "Ab2", "Ab3", "G3", "C4", "Bb3", "F3", "D4", "Eb4"];
 // var chords = [ ["C2", "F2", "Ab2", "C4"], ["Eb3", "G3", "Ab4", "G2"], ["F2", "Bb3", "F3", "D4"], ["G2", "Bb3", "C4", "Eb4"] ];
-const urlNanoMain = "wss://ws.nanocrawler.cc";
-const urlNanoBeta = "wss://beta.ws.nanocrawler.cc";
+const url_nano_main = "wss://ws.nanocrawler.cc";
+const url_nano_beta = "wss://beta.ws.nanocrawler.cc";
+const block_explorer_main = "https://nanocrawler.cc/explorer/block/"
+const block_explorer_beta = "https://beta.nanocrawler.cc/explorer/block/"
+var block_explorer = block_explorer_main
 
-const socketNanoMain = new WebSocket(urlNanoMain);
-const socketNanoBeta = new WebSocket(urlNanoBeta);
+const socket_nano_main = new WebSocket(url_nano_main);
+const socket_nano_beta = new WebSocket(url_nano_beta);
 var netSelected = 0; //0=main, 1=beta
 
 var transactions = [];
 var new_blocks = false //indicate when new blocks has arrived
+var has_init = false //indicate first init, to avoid double init melodies when using the slider
 
 var chords = [["B1", "F#1", "F#2", "B2", "F#3", "B3", "D3", "A3", "D4", "E4", "A4", "D5"], ["B2", "F#2", "B3", "F#3", "D2", "E2", "A2", "D3", "E3", "A3", "D4"],
 ["D2", "F#2", "D3", "F#3", "D2", "E2","F#2", "A2", "E3", "A3", "E4" ], ["F#2", "C#2", "F#3", "C#3", "E3", "F#3", "A3", "B3", "C#3", "E4", "A4", "B4", "E5"],
@@ -180,8 +184,54 @@ function dummy_notes() {
   //transactions = []; //if not using this, the new blocks will append to the dummy melody
 }
 
+function text_generator(amount, hash, type) {
+    if (!has_init) {
+      return;
+    }
+    var fullWidth = window.innerWidth-100;
+    var fullHeight = window.innerHeight-200;
+
+    var elem = document.createElement("div");
+
+    size = Math.round(amount/10 + 10);
+    if (size < 10) {
+        size = 10;
+    }
+    if (size > 100) {
+        size = 100;
+    }
+
+    if (type == "send") {
+        elem.innerHTML = '<a target="_blank" href="' + block_explorer + hash + '">' + amount.toFixed(6) + ' -\></a>';
+    }
+    else {
+        elem.innerHTML = '<a target="_blank" href="' + block_explorer + hash + '">-\> ' + amount.toFixed(6) + '</a>';
+    }
+
+    elem.style.fontSize = size + "px";
+    elem.style.position = "absolute";
+    elem.style.left = Math.round(Math.random() * (fullWidth)) + "px";
+    elem.style.top = Math.round(Math.random() * (fullHeight)) + 100 + "px";
+    elem.classList.add("floating-text");
+
+    //fadeout effect
+    var fadeEffect = setInterval(function () {
+        if (!elem.style.opacity) {
+            elem.style.opacity = 0.8;
+        }
+        if (elem.style.opacity > 0.1) {
+            elem.style.opacity -= 0.05;
+        } else {
+            elem.remove();
+            clearInterval(fadeEffect);
+        }
+    }, 300);
+    document.body.appendChild(elem);
+}
+
 function init() {
-	start_tone_stuff();
+    has_init = true;
+	  start_tone_stuff();
     var e = document.createElement("canvas");
     e = document.getElementById("canvas");
     console.log("init called ");
@@ -298,7 +348,7 @@ function trigger_light(x, hasPitch, scale) {
     //update_transaction_display(block_info);
 
     var ran_cube = cubes.children[ (cubes.children.length - 1) -  x];
-    var justCol = block_info[2].slice(7, block_info[2].length);
+    var justCol = block_info[1];
     var new_col = interpret_cube_color(justCol);
     ran_cube.material.color.setHex( new_col);
     if (hasPitch){
@@ -455,9 +505,8 @@ function define_content() {
     if (transactions.length == 0) {
     	var one_info = [];
 		    //one_info.push(this_tx.block_id);
-		    one_info.push(0);
-        one_info.push("");
-        one_info.push("Empty block...");
+		    one_info.push("0");
+        one_info.push(0);
         transaction_info.push(one_info);
     } else {
     	for (var xx = 0; xx < transactions.length; xx++ ) {
@@ -465,9 +514,8 @@ function define_content() {
 	        this_tx = transactions[xx];
 
  	        var amount =  this_tx.amount;
-	        one_info.push(block_num);
-	        one_info.push("");
-	        one_info.push("AMOUNT: " + amount.toFixed(4));
+	        one_info.push(this_tx.hash);
+	        one_info.push(amount.toFixed(4));
 	        transaction_info.push(one_info);
 	        if (this_tx.amount == 0) {
 	            new_melody.push('C7');
@@ -523,10 +571,14 @@ $(document).ready(function(){
   document.getElementById("net-switch").addEventListener('change', (event) => {
       if (event.target.checked) {
           netSelected = 1;
+          block_explorer = block_explorer_beta
       } else {
           netSelected = 0;
+          block_explorer = block_explorer_main
       }
-      dummy_notes();
+      if (has_init) {
+          dummy_notes();
+      }
   });
 
   document.getElementById("info-button").addEventListener("click", function(e) {
@@ -601,7 +653,7 @@ function schedule_next(){
 		xCount++;
 	} else {
 		blockSeq++;
-    console.log("Sequence:" + blockSeq)
+    console.log("Sequence:" + blockSeq + " / " + (collected_blocks.length))
 		check_for_new_content();
 	}
 }
@@ -646,15 +698,15 @@ setInterval(function() {
 }, 10000);
 
 // connect to sockets
-socketNanoMain.onopen = ()=>{
-	socketNanoMain.send(JSON.stringify({
+socket_nano_main.onopen = ()=>{
+	socket_nano_main.send(JSON.stringify({
     event: "subscribe",
     data: ["all"]
   }));
 }
 
-socketNanoBeta.onopen = ()=>{
-	socketNanoBeta.send(JSON.stringify({
+socket_nano_beta.onopen = ()=>{
+	socket_nano_beta.send(JSON.stringify({
     event: "subscribe",
     data: ["all"]
   }));
@@ -674,30 +726,33 @@ function processSocket(data) {
 	//console.log(txData);
   transactions.push(txData);
   new_blocks = true;
-  document.getElementById("currentHash").innerHTML = 'Latest hash: <a target="_blank" href="https://nanocrawler.cc/explorer/block/' + txData.hash + '">' + txData.hash + '</a>';
-  document.getElementById("currentAmount").innerHTML = "Latest amount: " + txData.amount;
+  //document.getElementById("currentHash").innerHTML = 'Latest hash: <a target="_blank" href="https://nanocrawler.cc/explorer/block/' + txData.hash + '">' + txData.hash + '</a>';
+  //document.getElementById("currentAmount").innerHTML = "Latest amount: " + txData.amount;
+
+  //randomize the amount on screen
+  text_generator(txData.amount, txData.hash, txData.subtype)
 }
 
 // receive websocket information
-socketNanoMain.onmessage = (onmsg) =>{
+socket_nano_main.onmessage = (onmsg) =>{
   if (netSelected == 0) {
     processSocket(onmsg.data);
   }
 }
 
 // receive websocket information
-socketNanoBeta.onmessage = (onmsg) =>{
+socket_nano_beta.onmessage = (onmsg) =>{
   if (netSelected == 1) {
     processSocket(onmsg.data);
   }
 }
 
 // webSocket error
-socketNanoMain.onerror = (onerr) =>{
+socket_nano_main.onerror = (onerr) =>{
 	console.log(onerr);
 }
 
-socketNanoBeta.onerror = (onerr) =>{
+socket_nano_beta.onerror = (onerr) =>{
 	console.log(onerr);
 }
 
