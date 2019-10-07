@@ -22,6 +22,7 @@ const socketNanoBeta = new WebSocket(urlNanoBeta);
 var netSelected = 0; //0=main, 1=beta
 
 var transactions = [];
+var new_blocks = false //indicate when new blocks has arrived
 
 var chords = [["B1", "F#1", "F#2", "B2", "F#3", "B3", "D3", "A3", "D4", "E4", "A4", "D5"], ["B2", "F#2", "B3", "F#3", "D2", "E2", "A2", "D3", "E3", "A3", "D4"],
 ["D2", "F#2", "D3", "F#3", "D2", "E2","F#2", "A2", "E3", "A3", "E4" ], ["F#2", "C#2", "F#3", "C#3", "E3", "F#3", "A3", "B3", "C#3", "E4", "A4", "B4", "E5"],
@@ -132,10 +133,10 @@ reverb = new Tone.Freeverb(.95).toMaster();
 	        "sustain" : 0
 	    }
 	}).connect(feedbackDelay);
-	// conga.volume.value = -100;
-	// congaPart = new Tone.Sequence(function(time, pitch){
-	//     conga.triggerAttack(pitch, time, Math.random()*0.5 + 0.5);
-	// }, ["D1"], "2n").start(0);
+	//conga.volume.value = -100;
+	//congaPart = new Tone.Sequence(function(time, pitch){
+	//   conga.triggerAttack(pitch, time, Math.random()*0.5 + 0.5);
+	//}, ["D1"], "2n").start(0);
 
 	noise = new Tone.Noise("white").start();
 	noise.volume.value = -45;
@@ -159,6 +160,24 @@ function update_current_notes(xx) {
 	//console.log(chords[xx]);
 	current_notes = chords[xx];
 	current_colors = color_schemes[xx];
+}
+
+//send dummy tones to initialize the graphics
+function dummy_notes() {
+  transactions = [];
+  for (hash=0; hash<10; hash++) {
+    var txData = {
+      "account": [""],
+      "hash": ""+hash,
+      "amount": 0.001,
+      "subtype": "send"
+    }
+    transactions.push(txData);
+  }
+
+  new_blocks = true;
+  define_content();
+  //transactions = []; //if not using this, the new blocks will append to the dummy melody
 }
 
 function init() {
@@ -206,10 +225,8 @@ function init() {
     })
     window.addEventListener("resize", on_window_resize, !1);
 
-//  else
-//      renderer = new THREE.CanvasRenderer();
-	renderer.setClearColor(0x000000);
-	renderer.setPixelRatio( window.devicePixelRatio );
+	   renderer.setClearColor(0x000000);
+	    renderer.setPixelRatio( window.devicePixelRatio );
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.autoClear = false;
 
@@ -231,13 +248,13 @@ function init() {
     // container = document.getElementById( 'container' );
     // container.appendChild( renderer.domElement );
     var mesh = new THREE.SphereGeometry(300,300,12);
-	var vat2 = new THREE.MeshBasicMaterial();
-	//vat2.blending = THREE.AdditiveBlending;
-	sphere = new THREE.Mesh(mesh, vat2);
-	sphere.material.opacity = 0;
-	sphere.scale.x = 0.001;
-	sphere.scale.y = 0.001;
-	sphere.scale.z = 0.001;
+	  var vat2 = new THREE.MeshBasicMaterial();
+	  //vat2.blending = THREE.AdditiveBlending;
+	  sphere = new THREE.Mesh(mesh, vat2);
+	  sphere.material.opacity = 0;
+	  sphere.scale.x = 0.001;
+	  sphere.scale.y = 0.001;
+	  sphere.scale.z = 0.001;
     spotLight = new THREE.DirectionalLight( 0x0066f0 ),
     //ambient_light = new THREE.AmbientLight( 0x66f606 )
     cubes = new THREE.Object3D();
@@ -267,6 +284,7 @@ function init() {
     check_for_new_content();
     render();
 
+    dummy_notes();
 }
 
 function trigger_light(x, hasPitch, scale) {
@@ -307,7 +325,7 @@ function create_step_function(numSteps) {
 }
 
 function interpret_amount_beat(val) {
-	if (val < .25) {
+	if (val < .01) {
 		return "32n";
 	} else if ((val >= .01) && (val < 0.1)) {
 		return "16n";
@@ -316,14 +334,14 @@ function interpret_amount_beat(val) {
 	} else if ((val >= 1) && (val < 10)) {
 		return "4n";
 	} else if ((val >= 10) && (val < 100)) {
-		return "8m";
+		return "2n";
 	}else if ((val >= 100)) {
-		return "4m";
+		return "1n";
 	}
 }
 
 function interpret_amount_vel(val) {
-	if (val < .05) {
+	if (val < .01) {
 		return .3;
 	} else if ((val >= .01) && (val < 0.1)) {
 		return .4;
@@ -343,7 +361,6 @@ function interpret_hash(hash) {
     num_hash = hash.replace(/\D/g,'');
     num = mode(add(num_hash));
     //num = Math.floor(Math.random() * notes.length)
-    //console.log("Hashnote: " + num)
     return notes[num]
 }
 
@@ -405,6 +422,7 @@ function interpret_amount_scale(val){
 	}
 }
 
+// save melody in a melody buffer
 function write_to_dic(mel, beats, info, vel, scale) {
     arr = [];
     arr.push(mel);
@@ -417,6 +435,10 @@ function write_to_dic(mel, beats, info, vel, scale) {
 
 // create melody of transactions in the buffer
 function define_content() {
+    // only create new melody if new blocks has arrived
+    if (!new_blocks) {
+      return
+    }
     console.log("Buffer length: " + transactions.length)
     var new_melody = [];
     var new_beats = [];
@@ -429,7 +451,6 @@ function define_content() {
     while (transactions.length > 64) {
       transactions.shift()
     }
-    console.log("Melody length: " + transactions.length)
 
     if (transactions.length == 0) {
     	var one_info = [];
@@ -465,6 +486,7 @@ function define_content() {
     // play the melody
     console.log(new_melody)
     write_to_dic(new_melody, new_beats, transaction_info, new_velocity, new_scale);
+    new_blocks = false; //disable repeating the melody if no new blocks
 }
 
 function create_grid(content) {
@@ -504,7 +526,7 @@ $(document).ready(function(){
       } else {
           netSelected = 0;
       }
-      transactions = [] // reset block buffer
+      dummy_notes();
   });
 
   document.getElementById("info-button").addEventListener("click", function(e) {
@@ -567,7 +589,7 @@ function schedule_next(){
 	var v = collected_blocks[blockSeq][3][xCount];
 	var s = collected_blocks[blockSeq][4][xCount];
 	if (n !== "C7") {
-		//console.log(n, b, v);
+		console.log(n, b, v, s);
 		play_note(n,b,v, s, xCount);
 	} else {
 		trigger_light(xCount, false, 1);
@@ -579,6 +601,7 @@ function schedule_next(){
 		xCount++;
 	} else {
 		blockSeq++;
+    console.log("Sequence:" + blockSeq)
 		check_for_new_content();
 	}
 }
@@ -618,10 +641,9 @@ function play_note(n, b, v, s, x) {
 	}, n).start(Tone.now());
 }
 
-
 setInterval(function() {
     define_content();
-}, 5000);
+}, 10000);
 
 // connect to sockets
 socketNanoMain.onopen = ()=>{
@@ -650,8 +672,8 @@ function processSocket(data) {
 	}
 
 	//console.log(txData);
-  //define_content(txData)
   transactions.push(txData);
+  new_blocks = true;
   document.getElementById("currentHash").innerHTML = "Latest hash: " + txData.hash;
   document.getElementById("currentAmount").innerHTML = "Latest amount: " + txData.amount;
 }
@@ -693,13 +715,6 @@ socketNanoBeta.onerror = (onerr) =>{
 //     }
 //     fade = !fade;
 // }
-
-function update_transaction_display(block_info){
-  if (block_info) {
-    //document.getElementById("currentAmount").innerHTML = block_info[2];
-  }
-}
-
 
 var mode = function mode(arr) {
     return arr.reduce(function(current, item) {
