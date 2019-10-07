@@ -27,6 +27,7 @@ var netSelected = 0; //0=main, 1=beta
 var transactions = [];
 var new_blocks = false //indicate when new blocks has arrived
 var has_init = false //indicate first init, to avoid double init melodies when using the slider
+var should_reset = false //if the next loop should restart from 0 collected blocks
 
 var chords = [["B1", "F#1", "F#2", "B2", "F#3", "B3", "D3", "A3", "D4", "E4", "A4", "D5"], ["B2", "F#2", "B3", "F#3", "D2", "E2", "A2", "D3", "E3", "A3", "D4"],
 ["D2", "F#2", "D3", "F#3", "D2", "E2","F#2", "A2", "E3", "A3", "E4" ], ["F#2", "C#2", "F#3", "C#3", "E3", "F#3", "A3", "B3", "C#3", "E4", "A4", "B4", "E5"],
@@ -489,7 +490,11 @@ function define_content() {
     if (!new_blocks) {
       return
     }
-    console.log("Buffer length: " + transactions.length)
+    discarded = transactions.length - 128
+    if (discarded < 0) {
+      discarded = 0
+    }
+    console.log("Discarded tx: " + discarded)
     var new_melody = [];
     var new_beats = [];
     var new_velocity = [];
@@ -578,6 +583,7 @@ $(document).ready(function(){
       }
       if (has_init) {
           dummy_notes();
+          should_reset = true;
       }
   });
 
@@ -631,31 +637,36 @@ function on_window_resize() {
 var blockSeq = 0;
 var xCount = 0;
 function schedule_next(){
+  if (collected_blocks.length != 0) {
     //play note
     if (xCount == 0 ) {
     	var col = new THREE.Color(current_colors[0]);
     	renderer.setClearColor(col, .25);
     }
-	var n = collected_blocks[blockSeq][0][xCount];
-	var b = collected_blocks[blockSeq][1][xCount];
-	var v = collected_blocks[blockSeq][3][xCount];
-	var s = collected_blocks[blockSeq][4][xCount];
-	if (n !== "C7") {
-		console.log(n, b, v, s);
-		play_note(n,b,v, s, xCount);
-	} else {
-		trigger_light(xCount, false, 1);
-	}
+  	var n = collected_blocks[blockSeq][0][xCount];
+  	var b = collected_blocks[blockSeq][1][xCount];
+  	var v = collected_blocks[blockSeq][3][xCount];
+  	var s = collected_blocks[blockSeq][4][xCount];
+  	if (n !== "C7") {
+  		console.log(n, b, v, s);
+  		play_note(n,b,v, s, xCount);
+  	} else {
+  		trigger_light(xCount, false, 1);
+  	}
 
-	if (xCount  < collected_blocks[blockSeq][0].length-1) {
-		//schedule the next event relative to the current time by prefixing "+"
-		Tone.Transport.scheduleOnce(schedule_next, ("+" + b));
-		xCount++;
-	} else {
-		blockSeq++;
-    console.log("Sequence:" + blockSeq + " / " + (collected_blocks.length))
-		check_for_new_content();
-	}
+  	if (xCount  < collected_blocks[blockSeq][0].length-1) {
+  		//schedule the next event relative to the current time by prefixing "+"
+  		Tone.Transport.scheduleOnce(schedule_next, ("+" + b));
+  		xCount++;
+  	} else {
+  		blockSeq++;
+      console.log("Sequence:" + blockSeq + " / " + (collected_blocks.length))
+  		check_for_new_content();
+  	}
+  }
+  else {
+    check_for_new_content();
+  }
 }
 
 var newN = -1;
@@ -683,6 +694,11 @@ function check_for_new_content() {
 	} else {
 		Tone.Transport.scheduleOnce(check_for_new_content, ("+1m"));
 	}
+  if (should_reset) {
+    collected_blocks = [];
+    blockSeq = 0;
+    should_reset = false;
+  }
 }
 
 //const now = Tone.now()
