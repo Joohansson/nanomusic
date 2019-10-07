@@ -20,34 +20,42 @@ const block_explorer_main = "https://nanocrawler.cc/explorer/block/"
 const block_explorer_beta = "https://beta.nanocrawler.cc/explorer/block/"
 var block_explorer = block_explorer_main
 
-const socket_nano_main = new WebSocket(url_nano_main);
-const socket_nano_beta = new WebSocket(url_nano_beta);
+//var socket_nano_main = new WebSocket(url_nano_main);
+//var socket_nano_beta = new WebSocket(url_nano_beta);
+var socket_nano_main
+var socket_nano_beta
 var netSelected = 0; //0=main, 1=beta
+var interpretation = 0; //0=hash note, 1=amount note
 
 var transactions = [];
 var new_blocks = false //indicate when new blocks has arrived
 var has_init = false //indicate first init, to avoid double init melodies when using the slider
 var should_reset = false //if the next loop should restart from 0 collected blocks
 
-var chords = [["B1", "F#1", "F#2", "B2", "F#3", "B3", "D3", "A3", "D4", "E4", "A4", "D5"], ["B2", "F#2", "B3", "F#3", "D2", "E2", "A2", "D3", "E3", "A3", "D4"],
-["D2", "F#2", "D3", "F#3", "D2", "E2","F#2", "A2", "E3", "A3", "E4" ], ["F#2", "C#2", "F#3", "C#3", "E3", "F#3", "A3", "B3", "C#3", "E4", "A4", "B4", "E5"],
-["D1", "A2", "D2", "A3", "E3", "F#3", "G#3", "A3", "B3", "E4", "B4"], ["A2", "E2", "A3", "E3", "F#3", "G#3", "B3", "C#4", "E4", "B4"],
-["C#2", "F#2", "C#3", "F#3", "G#3", "A3", "C#4", "A4", "C#5"], ["F#1", "C#2", "F#2", "C#3", "F#3", "G#3", "A3", "B3", "C#4", "F#4"],
-["E1", "A1", "E2", "A2", "C#3", "F#3", "G#3", "A3", "B3", "E4", "G#4", "B4", "E5"], ["D1", "A1", "D2", "A2", "F#3", "G#3", "A3", "E4", "A4", "E5"]]
+var chords = [["B1", "F#1", "F#2", "B2", "F#3", "B3", "D3", "A3", "D4", "E4", "A4", "D5"],
+["B2", "F#2", "B3", "F#3", "D2", "E2", "A2", "D3", "E3", "A3", "D4"],
+["D2", "F#2", "D3", "F#3", "D2", "E2","F#2", "A2", "E3", "A3", "E4" ],
+["F#2", "C#2", "F#3", "C#3", "E3", "F#3", "A3", "B3", "C#3", "E4", "A4", "B4", "E5"],
+["D1", "A2", "D2", "A3", "E3", "F#3", "G#3", "A3", "B3", "E4", "B4"],
+["A2", "E2", "A3", "E3", "F#3", "G#3", "B3", "C#4", "E4", "B4"],
+["C#2", "F#2", "C#3", "F#3", "G#3", "A3", "C#4", "A4", "C#5"],
+["F#1", "C#2", "F#2", "C#3", "F#3", "G#3", "A3", "B3", "C#4", "F#4"],
+["E1", "A1", "E2", "A2", "C#3", "F#3", "G#3", "A3", "B3", "E4", "G#4", "B4", "E5"],
+["D1", "A1", "D2", "A2", "F#3", "G#3", "A3", "E4", "A4", "E5"]]
 var current_notes = chords[0];
 //cyan, green, lime, amber, deep orange, red, pink, purple, indigo, light blue
 var color_schemes =
 [
-[0x006064, "0xe0f7fa", "0xb2ebf2", "0x80deea", "0x44d0e1", "0x26c6da", "0x00bcd4", "0x00acc1", "0x0097a7"],
-[0x1b5e20, "0xe8f5e9", "0xc8e6c9", "0xa5d6a7", "0x81c784", "0x66bb6a", "0x4caf50", "0x43a047", "0x388e3c"],
-[0xf57f17, "0xfffde7", "0xfff9c4", "0xfff59d", "0xfff176", "0xffee58", "0xffeb3b", "0xfdd835", "0xfbc02d"],
-[0xff6f00, "0xfff8e1", "0xffecb3", "0xffe082", "0xffd54f", "0xffca28", "0xffc107", "0xffb300", "0xffa000"],
-[0xbf360c, "0xfbe9e7", "0xffccbc", "0xffab91", "0xff8a65", "0xff7043", "0xff5722", "0xf4511e", "0xe64a19"],
-[0xb71c1c, "0xffebee", "0xffcdd2", "0xef9a9a", "0xe57373", "0xef5350", "0xff1744", "0xf44336", "0xd32f2f"],
-[0x880e4f, "0xfce4ec", "0xf8bbd0", "0xf48fb1", "0xf06292", "0xf50057", "0xec407a", "0xe91e63", "0xe91e63"],
-[0x4a148c, "0xf3e5f5", "0xe1bee7", "0xce93d8", "0xba68c8", "0xab47bc", "0xd500f9", "0x9c27b0", "0x7b1fa2"],
-[0x1a237e, "0xe8eaf6", "0xc5cae9", "0x9fa8da", "0x7986cb", "0x5c6bc0", "0x3d5afe", "0x3f51b5", "0x303f9f"],
-[0x01579b, "0xe1f5fe", "0xb3e5fc", "0x81d4fa", "0x4fc3f7", "0x29b6f6", "0x00b0ff", "0x03a9f4", "0x0288d1"]
+[0x006064, 0xe0f7fa, 0xb2ebf2, 0x80deea, 0x44d0e1, 0x26c6da, 0x00bcd4, 0x00acc1, 0x0097a7],
+[0x1b5e20, 0xe8f5e9, 0xc8e6c9, 0xa5d6a7, 0x81c784, 0x66bb6a, 0x4caf50, 0x43a047, 0x388e3c],
+[0xf57f17, 0xfffde7, 0xfff9c4, 0xfff59d, 0xfff176, 0xffee58, 0xffeb3b, 0xfdd835, 0xfbc02d],
+[0xff6f00, 0xfff8e1, 0xffecb3, 0xffe082, 0xffd54f, 0xffca28, 0xffc107, 0xffb300, 0xffa000],
+[0xbf360c, 0xfbe9e7, 0xffccbc, 0xffab91, 0xff8a65, 0xff7043, 0xff5722, 0xf4511e, 0xe64a19],
+[0xb71c1c, 0xffebee, 0xffcdd2, 0xef9a9a, 0xe57373, 0xef5350, 0xff1744, 0xf44336, 0xd32f2f],
+[0x880e4f, 0xfce4ec, 0xf8bbd0, 0xf48fb1, 0xf06292, 0xf50057, 0xec407a, 0xe91e63, 0xe91e63],
+[0x4a148c, 0xf3e5f5, 0xe1bee7, 0xce93d8, 0xba68c8, 0xab47bc, 0xd500f9, 0x9c27b0, 0x7b1fa2],
+[0x1a237e, 0xe8eaf6, 0xc5cae9, 0x9fa8da, 0x7986cb, 0x5c6bc0, 0x3d5afe, 0x3f51b5, 0x303f9f],
+[0x01579b, 0xe1f5fe, 0xb3e5fc, 0x81d4fa, 0x4fc3f7, 0x29b6f6, 0x00b0ff, 0x03a9f4, 0x0288d1]
 ];
 var tick = 0,
     smallest_dimension = Math.min( window.innerWidth, window.innerHeight ),
@@ -162,7 +170,7 @@ reverb = new Tone.Freeverb(.95).toMaster();
 
 
 function update_current_notes(xx) {
-	//console.log(chords[xx]);
+	console.log("Chord: " + xx);
 	current_notes = chords[xx];
 	current_colors = color_schemes[xx];
 }
@@ -170,10 +178,18 @@ function update_current_notes(xx) {
 //send dummy tones to initialize the graphics
 function dummy_notes() {
   transactions = [];
-  for (hash=0; hash<10; hash++) {
+  hashes = [
+    "000000000000000000000000000000000000000000000000000000000000000",
+    "1111111111111111111111111111111111111111111111111111111111111111",
+    "2222222222222222222222222222222222222222222222222222222222222222",
+    "3333333333333333333333333333333333333333333333333333333333333333",
+    "4444444444444444444444444444444444444444444444444444444444444444",
+    "5555555555555555555555555555555555555555555555555555555555555555"
+  ];
+  for (hash=0; hash<=5; hash++) {
     var txData = {
       "account": [""],
-      "hash": ""+hash,
+      "hash": ""+hashes[hash],
       "amount": 0.001,
       "subtype": "send"
     }
@@ -194,7 +210,7 @@ function text_generator(amount, hash, type) {
 
     var elem = document.createElement("div");
 
-    size = Math.round(amount/10 + 10);
+    var size = Math.round(amount/10 + 10);
     if (size < 10) {
         size = 10;
     }
@@ -202,11 +218,16 @@ function text_generator(amount, hash, type) {
         size = 100;
     }
 
+    var fade_delay = Math.sqrt(amount) * 20;
+    if (fade_delay > 1000) {
+      fade_delay = 1000;
+    }
+
     if (type == "send") {
-        elem.innerHTML = '<a target="_blank" href="' + block_explorer + hash + '">' + amount.toFixed(6) + ' -\></a>';
+        elem.innerHTML = '<a target="_blank" href="' + block_explorer + hash + '">' + amount.toFixed(6) + '►</a>';
     }
     else {
-        elem.innerHTML = '<a target="_blank" href="' + block_explorer + hash + '">-\> ' + amount.toFixed(6) + '</a>';
+        elem.innerHTML = '<a target="_blank" href="' + block_explorer + hash + '">►' + amount.toFixed(6) + '</a>';
     }
 
     elem.style.fontSize = size + "px";
@@ -226,7 +247,7 @@ function text_generator(amount, hash, type) {
             elem.remove();
             clearInterval(fadeEffect);
         }
-    }, 300);
+    }, 300 + fade_delay);
     document.body.appendChild(elem);
 }
 
@@ -268,12 +289,6 @@ function init() {
             p.classList.toggle("hidden"),
             !1
         });
-
-    document.getElementById("close-address-button").addEventListener("click", function(e) {
-        return e.preventDefault(),
-        p.classList.toggle("hidden"),
-        !1
-    })
     window.addEventListener("resize", on_window_resize, !1);
 
 	   renderer.setClearColor(0x000000);
@@ -386,8 +401,12 @@ function interpret_amount_beat(val) {
 		return "4n";
 	} else if ((val >= 10) && (val < 100)) {
 		return "2n";
-	}else if ((val >= 100)) {
+	} else if ((val >= 100) && (val < 1000)) {
 		return "1n";
+	} else if ((val >= 1000) && (val < 10000)) {
+		return "1m";
+	} else {
+		return "2m";
 	}
 }
 
@@ -416,46 +435,46 @@ function interpret_hash(hash) {
 }
 
 function interpret_amount_note(val){
-	if (val < .25) {
+  if (val < .001) {
 		return current_notes[current_notes.length - 1];
-	} else if ((val >= .25) && (val < 1)) {
+	} else if ((val >= .001) && (val < 0.01)) {
 		return current_notes[current_notes.length - 2];
-	} else if ((val >= 1) && (val < 10)) {
+	} else if ((val >= 0.01) && (val < 0.1)) {
 		return current_notes[current_notes.length - 3];
-	} else if ((val >= 10) && (val < 100)) {
+	} else if ((val >= 0.1) && (val < 1)) {
 		return current_notes[current_notes.length - 4];
-	} else if ((val >= 100) && (val < 500)) {
+	} else if ((val >= 1) && (val < 10)) {
 		return current_notes[current_notes.length - 5];
-	} else if ((val >= 500) && (val < 1000)) {
+	} else if ((val >= 10) && (val < 100)) {
 		return current_notes[current_notes.length - 6];
-	}else if ((val >= 1000) && (val < 5000)) {
+	}else if ((val >= 100) && (val < 1000)) {
 		return current_notes[current_notes.length - 7];
-	}else if ((val >= 5000) && (val < 10000)) {
+	}else if ((val >= 1000) && (val < 5000)) {
 		return current_notes[current_notes.length - 8];
-	}else if ((val >= 10000)) {
+	}else if ((val >= 5000)) {
 		return current_notes[current_notes.length - 9];
 	}
 }
 
 function interpret_cube_color(val){
-	if (val < .01) {
-		return current_colors[0];
+	if (val < .001) {
+		return current_colors[8];
 	} else if ((val >= .001) && (val < 0.01)) {
-		return current_colors[1];
+		return current_colors[7];
 	} else if ((val >= 0.01) && (val < 0.1)) {
-		return current_colors[2];
+		return current_colors[6];
 	} else if ((val >= 0.1) && (val < 1)) {
-		return current_colors[3];
+		return current_colors[5];
 	} else if ((val >= 1) && (val < 10)) {
 		return current_colors[4];
 	} else if ((val >= 10) && (val < 100)) {
-		return current_colors[5];
+		return current_colors[3];
 	}else if ((val >= 100) && (val < 1000)) {
-		return current_colors[6];
+		return current_colors[2];
 	}else if ((val >= 1000) && (val < 5000)) {
-		return current_colors[7];
+		return current_colors[1];
 	}else if ((val >= 5000)) {
-		return current_colors[8];
+		return current_colors[0];
 	}
 }
 
@@ -529,8 +548,12 @@ function define_content() {
 	            //newMelody.push(["4n", null]);
 	        } else {
 	            new_beats.push(interpret_amount_beat(amount));
-	            new_melody.push(interpret_hash(this_tx.hash));
-	            //new_melody.push(interpret_amount_note(amount));
+              if (interpretation == 0) {
+                new_melody.push(interpret_hash(this_tx.hash));
+              }
+              else if (interpretation == 1){
+                new_melody.push(interpret_amount_note(amount));
+              }
 	            new_velocity.push(interpret_amount_vel(amount));
 	            new_scale.push(interpret_amount_scale(amount));
 	        }
@@ -584,6 +607,14 @@ $(document).ready(function(){
       if (has_init) {
           dummy_notes();
           should_reset = true;
+      }
+  });
+
+  document.getElementById("note-switch").addEventListener('change', (event) => {
+      if (event.target.checked) {
+          interpretation = 1;
+      } else {
+          interpretation = 0;
       }
   });
 
@@ -650,6 +681,11 @@ function schedule_next(){
   	if (n !== "C7") {
   		console.log(n, b, v, s);
   		play_note(n,b,v, s, xCount);
+
+      // update stats
+      var hash = collected_blocks[blockSeq][2][xCount][0]
+      var amount = collected_blocks[blockSeq][2][xCount][1]
+      document.getElementById("currentHash").innerHTML = '<a target="_blank" href="https://nanocrawler.cc/explorer/block/' + hash + '">' + hash + '</a> | ' + amount + ' ► Note: ' + n + " - " + b;
   	} else {
   		trigger_light(xCount, false, 1);
   	}
@@ -669,19 +705,10 @@ function schedule_next(){
   }
 }
 
-var newN = -1;
-function count_to_ten() {
-	newN++;
-	if (newN >= chords.length) {
-		newN = 0;
-	}
-}
-
 function check_for_new_content() {
 	if (collected_blocks[blockSeq] !== undefined) {
 		if (collected_blocks[blockSeq][0].length > 0) {
-			count_to_ten();
-			update_current_notes(newN);
+			update_current_notes(Math.floor(Math.random() * chords.length));
 			xCount = 0;
 			create_grid(collected_blocks[blockSeq]);
 
@@ -709,24 +736,83 @@ function play_note(n, b, v, s, x) {
 	}, n).start(Tone.now());
 }
 
+//melody interval
 setInterval(function() {
     define_content();
 }, 10000);
 
-// connect to sockets
+// connect to socket
+/*
 socket_nano_main.onopen = ()=>{
+  console.log("Websocket main opened")
 	socket_nano_main.send(JSON.stringify({
     event: "subscribe",
     data: ["all"]
   }));
 }
+*/
 
+// connect to socket
+/*
 socket_nano_beta.onopen = ()=>{
+  console.log("Websocket beta opened")
 	socket_nano_beta.send(JSON.stringify({
     event: "subscribe",
     data: ["all"]
   }));
 }
+*/
+
+const mainSocketMessageListener = (event) => {
+  if (netSelected == 0) {
+    processSocket(event.data);
+  }
+};
+
+const mainSocketOpenListener = (event) => {
+  console.log("Websocket main opened")
+	socket_nano_main.send(JSON.stringify({
+    event: "subscribe",
+    data: ["all"]
+  }));
+};
+
+const mainSocketCloseListener = (event) => {
+  if (socket_nano_main) {
+    console.error('Main socket disconnected.');
+  }
+  socket_nano_main = new WebSocket(url_nano_main);
+  socket_nano_main.addEventListener('open', mainSocketOpenListener);
+  socket_nano_main.addEventListener('message', mainSocketMessageListener);
+  socket_nano_main.addEventListener('close', mainSocketCloseListener);
+};
+
+const betaSocketMessageListener = (event) => {
+  if (netSelected == 1) {
+    processSocket(event.data);
+  }
+};
+
+const betaSocketOpenListener = (event) => {
+  console.log("Websocket beta opened")
+	socket_nano_beta.send(JSON.stringify({
+    event: "subscribe",
+    data: ["all"]
+  }));
+};
+
+const betaSocketCloseListener = (event) => {
+  if (socket_nano_beta) {
+    console.error('Beta socket disconnected.');
+  }
+  socket_nano_beta = new WebSocket(url_nano_beta);
+  socket_nano_beta.addEventListener('open', betaSocketOpenListener);
+  socket_nano_beta.addEventListener('message', betaSocketMessageListener);
+  socket_nano_beta.addEventListener('close', betaSocketCloseListener);
+};
+
+mainSocketCloseListener();
+betaSocketCloseListener();
 
 // read data from websocket callback
 function processSocket(data) {
@@ -742,50 +828,27 @@ function processSocket(data) {
 	//console.log(txData);
   transactions.push(txData);
   new_blocks = true;
-  //document.getElementById("currentHash").innerHTML = 'Latest hash: <a target="_blank" href="https://nanocrawler.cc/explorer/block/' + txData.hash + '">' + txData.hash + '</a>';
-  //document.getElementById("currentAmount").innerHTML = "Latest amount: " + txData.amount;
 
   //randomize the amount on screen
   text_generator(txData.amount, txData.hash, txData.subtype)
 }
 
 // receive websocket information
+/*
 socket_nano_main.onmessage = (onmsg) =>{
   if (netSelected == 0) {
     processSocket(onmsg.data);
   }
 }
-
+*/
+/*
 // receive websocket information
 socket_nano_beta.onmessage = (onmsg) =>{
   if (netSelected == 1) {
     processSocket(onmsg.data);
   }
 }
-
-// webSocket error
-socket_nano_main.onerror = (onerr) =>{
-	console.log(onerr);
-}
-
-socket_nano_beta.onerror = (onerr) =>{
-	console.log(onerr);
-}
-
-// var fade = false;
-// setInterval(function(){
-// 	fade_drums();
-// }, 120000);
-
-
-// function fade_drums() {
-// 	if (fade) {
-// 		conga.volume.rampTo(-100, 4);
-//     } else {
-//     	conga.volume.rampTo(-20, 4);
-//     }
-//     fade = !fade;
-// }
+*/
 
 var mode = function mode(arr) {
     return arr.reduce(function(current, item) {
@@ -812,27 +875,4 @@ function SetToZero() {
 	sphere.scale.y = 0.001;
 	sphere.scale.z = 0.001;
 	sphere.material.opacity = 0;
-}
-
-
-function trigger_special_notes () {
-	// var specialNote = new Tone.Event(function(time, pitch){
-	// 	specialSynth.triggerAttackRelease(pitch, "1m");
-	// }, current_notes[7]).start();
-	// var specialNote2 = new Tone.Event(function(time, pitch) {
-	// 	specialSynth2.triggerAttackRelease(pitch, "1m");
-	// }, current_notes[4]).start();
-	// sphere.material.opacity = .5;
-	// tween4 = new TWEEN.Tween( sphere.material )
- //            .to( {opacity: 0 }, 12000 )
- //            .repeat( 0 )
- //            .easing( create_step_function(64) )
- //            .start()
-	// sphere.material.color.setHex(special_colors[Math.floor(Math.random() * special_colors.length)]);
- //    tween3 = new TWEEN.Tween( sphere.scale )
- //    .to( {x: 5, y: 5 }, 9000 )
- //    .repeat( 0 )
- //    .onComplete(SetToZero)
- //    .easing( create_step_function(30) )
- //    .start()
 }

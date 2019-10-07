@@ -31,8 +31,12 @@ canvas {
   margin: 10px 0 0 10px;
 }
 
+.switches {
+  display: flex;
+}
+
 .switch-container {
-  margin: 10px 0 0 10px;
+  margin: 10px;
   font-weight: bold;
 }
 
@@ -76,6 +80,10 @@ canvas {
 		height: 100%;
 }
 
+.switch_container {
+
+}
+
 .muted {
   display: none;
 }
@@ -93,24 +101,12 @@ canvas {
   text-decoration: none;
 }
 
-/*#logo {
-  left: 0;
-  top: 0;
-  width: 177px;
-  height: 100px;
-  background-image: url("https://s3-us-west-2.amazonaws.com/bitbonkers/logo.png");
-  background-size: contain;
-  background-repeat: no-repeat;
-}*/
-
 #address-img {
-  width: 200px;
-  height: 200px;
-  /*background-image: url("../images/qr.png");*/
+  width: 150px;
+  height: 150px;
   background-image: url("qr_donation_wallet.png");
   background-size: contain;
   background-repeat: no-repeat;
-  margin: 0 auto;
 }
 
 #play_button {
@@ -125,24 +121,20 @@ canvas {
   cursor: pointer;
 }
 
+.explain {
+  line-height: 18px;
+}
+
 .floating-text a {
   color: #000 !important;
   font-weight: bold !important;
-  font-family: "verdana" !important;
+  font-family: Verdana,Geneva,sans-serif !important;
 }
 
 .floating-text a:hover {
   color: #222 !important;
   text-decoration: underline !important;
 }
-
-/*#key {
-  width:200px;
-}*/
-
-/*.address {
-  text-transform: none!important;
-}*/
 
 #app-viewport {
   position: relative;
@@ -181,38 +173,6 @@ canvas {
   width:100%;
 }
 
-#address-info {
-  position: absolute;
-  top:0;
-  left:0;
-  box-sizing: border-box;
-  z-index: 1003;
-  height:100%;
-  width:100%;
-  background-color: rgba(0,0,0,.9);
-  pointer-events: auto;
-  padding:4vh;
-  text-align: center;
-}
-
-#address-page{
-  -webkit-align-items: left;
-  -ms-flex-align: left;
-  align-items: left;
-  display: -webkit-flex;
-  display: -ms-flexbox;
-  display: flex;
-  -webkit-flex-flow: column;
-  -ms-flex-flow: column;
-  flex-flow: column;
-  -webkit-justify-content: center;
-  -ms-flex-pack: center;
-  justify-content: center;
-
-  height:100%;
-  width:100%;
-}
-
 .hidden {
   display:none!important;
   pointer-events: none;
@@ -231,11 +191,7 @@ h1{font-weight: 900;}
 a { color: #fff; text-decoration: none;}
 a, a:hover, a:visited, a:active{color: #fff}
 a:hover{text-decoration:underline;}
-/*
-#info-button { padding: 10px 20px; border: 1px solid white; line-height: 60px; margin-left:20px;}
-#mute-button { padding: 10px 20px; border: 1px solid white; line-height: 60px; margin-left:20px; }*/
 #close-button { padding: 10px 20px; border: 1px solid white; line-height: 60px; }
-#close-address-button { padding: 10px 20px; border: 1px solid white; line-height: 60px; }
 .center{text-align: center;}
 
 @media screen
