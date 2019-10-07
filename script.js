@@ -63,12 +63,6 @@ var tick = 0,
 //     mainGain.gain.value = .1;
 
 function mute_sound() {
-    mute != mute;
-    if (mute === true) {
-        document.getElementById("mute-button").innerHTML = "UN-MUTE";
-    } else {
-        document.getElementById("mute-button").innerHTML = "MUTE";
-    }
     Tone.Master.mute = !Tone.Master.mute
 }
 
@@ -191,11 +185,12 @@ function init() {
     renderer = new THREE.WebGLRenderer( {canvas: e,alpha: true, antialias:true} );
     var t = e.getContext("2d");
     e = document.getElementById("canvas");
-    //  document.getElementById("mute-button").addEventListener("click", function(e) {
 
-    //     mute_sound();
-
-    // });
+    // mute button
+    document.getElementById("speaker").addEventListener("click", function(e) {
+        this.classList.toggle('is-muted')
+        mute_sound();
+    });
 
     for (var p = document.getElementById("address-info"), b = document.getElementsByClassName("address-button"), E = 0; E < b.length; E++)
         b[E].addEventListener("click", function(e) {
@@ -431,7 +426,7 @@ function define_content() {
     var block_num = 0
 
     // pop old values if longer than 127
-    while (transactions.length > 50) {
+    while (transactions.length > 64) {
       transactions.shift()
     }
     console.log("Melody length: " + transactions.length)
