@@ -83,7 +83,7 @@ function mute_sound() {
 var osc, reverb, feedbackDelay, feedbackDelay2, feedbackDelay3, wider, eq, synthEQ, synth, polySynth, conga, congaPart, noise, autoFilter;
 
 function start_tone_stuff(){
-reverb = new Tone.Freeverb(.95).toMaster();
+  reverb = new Tone.Freeverb(.95).toMaster();
 	reverb.dampening.value = 3000;
 	feedbackDelay = new Tone.FeedbackDelay("6n", .75).toMaster();
 	feedbackDelay3 = new Tone.FeedbackDelay("1n", 0.55).toMaster();
@@ -696,7 +696,8 @@ function schedule_next(){
   		xCount++;
   	} else {
   		blockSeq++;
-      console.log("Sequence:" + blockSeq + " / " + (collected_blocks.length))
+      //console.log("Sequence:" + blockSeq + " / " + (collected_blocks.length))
+      document.getElementById("currentSequence").innerHTML = "Melody Sequence: " + blockSeq + " / " + (collected_blocks.length);
   		check_for_new_content();
   	}
   }
