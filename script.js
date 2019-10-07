@@ -674,7 +674,7 @@ function processSocket(data) {
 	//console.log(txData);
   transactions.push(txData);
   new_blocks = true;
-  document.getElementById("currentHash").innerHTML = "Latest hash: " + txData.hash;
+  document.getElementById("currentHash").innerHTML = 'Latest hash: <a target="_blank" href="https://nanocrawler.cc/explorer/block/' + txData.hash + '">' + txData.hash + '</a>';
   document.getElementById("currentAmount").innerHTML = "Latest amount: " + txData.amount;
 }
 
