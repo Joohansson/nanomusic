@@ -154,7 +154,7 @@ function start_tone_stuff(){
 	//}, ["D1"], "2n").start(0)
 
 	noise = new Tone.Noise("white").start()
-	noise.volume.value = -45
+	noise.volume.value = -40
 	//make an autofilter to shape the noise
 	autoFilter = new Tone.AutoFilter({
 		"frequency" : "20m",
@@ -846,16 +846,3 @@ function SetToZero() {
 	sphere.scale.z = 0.001
 	sphere.material.opacity = 0
 }
-
-function sleep(milliseconds) {
-  var start = new Date().getTime();
-  for (var i = 0; i < 1e7; i++) {
-    if ((new Date().getTime() - start) > milliseconds){
-      break;
-    }
-  }
-}
-
-//first init melody
-sleep(5000)
-define_content()
