@@ -306,12 +306,12 @@ function init() {
 
     composer.addPass(renderPass)
 
-    var bloomPass = new THREE.BloomPass(0.8,25,8,256)
+    var bloomPass = new THREE.BloomPass(0.8,25,8,128)
     composer.addPass(bloomPass)
     bloomPass.clear = true
 
     //var effectFilm = new THREE.FilmPass(1, .05, 128, false)
-    var effectFilm = new THREE.FilmPass(1, .00, 256, false)
+    var effectFilm = new THREE.FilmPass(1, .00, 128, false)
     effectFilm.renderToScreen = true
     composer.addPass(effectFilm)
     //container = document.getElementById( 'container' )
@@ -629,11 +629,17 @@ $(document).ready(function(){
       var l = document.getElementById("info")
       return e.preventDefault(),
       l.classList.toggle("hidden"),
+      l = document.getElementById("play_button"),
+      l.classList.toggle("hidden"),
       !1
+
+
   }),
   document.getElementById("close-button").addEventListener("click", function(e) {
       var l = document.getElementById("info")
       return e.preventDefault(),
+      l.classList.toggle("hidden"),
+      l = document.getElementById("play_button"),
       l.classList.toggle("hidden"),
       !1
   })
