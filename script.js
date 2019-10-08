@@ -1,3 +1,17 @@
+/**A SMALL PART OF THE CODE BELOW IS USING CODE FROM POLYMER
+ * @license
+ * Copyright (c) 2017 The Polymer Project Authors. All rights reserved.
+ * This code may only be used under the BSD style license found at
+ * http://polymer.github.io/LICENSE.txt
+ * The complete set of authors may be found at
+ * http://polymer.github.io/AUTHORS.txt
+ * The complete set of contributors may be found at
+ * http://polymer.github.io/CONTRIBUTORS.txt
+ * Code distributed by Google as part of the polymer project is also
+ * subject to an additional IP rights grant found at
+ * http://polymer.github.io/PATENTS.txt
+ */
+
 var scene, camera, renderer, composer
 var geometry, material, mesh
 var started = false
@@ -35,6 +49,8 @@ var transactions_last = 0 //last processed melody length
 var playing = false //currently playing
 var noise_counter = 0.0
 var customPass = null
+var muted = false
+var volumeval = 50
 
 var chords = [["B1", "F#1", "F#2", "B2", "F#3", "B3", "D3", "A3", "D4", "E4", "A4", "D5"],
 ["B2", "F#2", "B3", "F#3", "D2", "E2", "A2", "D3", "E3", "A3", "D4"],
@@ -82,6 +98,7 @@ var tick = 0,
 
 function mute_sound() {
     Tone.Master.mute = !Tone.Master.mute
+    muted = !muted
 }
 
 var osc, reverb, feedbackDelay, feedbackDelay2, feedbackDelay3, wider, eq, synthEQ, synth, polySynth, conga, congaPart, noise, autoFilter
@@ -210,7 +227,7 @@ function text_generator(amount, hash, type) {
     if (!has_init) {
       return
     }
-    var fullWidth = window.innerWidth-100
+    var fullWidth = window.innerWidth-200
     var fullHeight = window.innerHeight-200
 
     var elem = document.createElement("div")
@@ -671,6 +688,14 @@ $(document).ready(function(){
 		})
 		init()
 	})
+
+  $(".volume-chooser").on("input", ".volume", function(e){
+    volumeval = $(e.currentTarget).val()
+    if(!muted) {
+      var volume = Tone.Master;
+        volume.set("volume", -(50-volumeval));
+    }
+  })
 })
 
 function render() {

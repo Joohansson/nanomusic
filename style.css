@@ -62,7 +62,6 @@ canvas {
     background-color: white;
     overflow: hidden;
     transition: width 0.2s;
-    box-shadow: var(--shadow-medium);
     opacity: 0.3;
 }
 
@@ -71,7 +70,7 @@ canvas {
     top: 10px;
     right: 10px;
     background-color: transparent;
-    outline-color: var(--outline-color);
+    outline-color: #AAA;
     border: none;
     -webkit-appearance: none;
     height: 24px;
@@ -124,6 +123,7 @@ canvas {
   margin: -128px 0 0 -128px;
   background-image: url("play_button.png");
   cursor: pointer;
+  opacity: 0.8;
 }
 
 .explain {
@@ -336,4 +336,23 @@ input:checked + .slider:before {
   border-radius: 50%;
 }
 
-/* ----End Slider----*/
+/* Volume slider */
+.volume-chooser {
+  padding: 0px;
+  position: absolute;
+  top: 22px;
+  right: 150px;
+  opacity: 0.3;
+}
+
+.volume-control{
+  position: absolute;
+  display: block;
+  top: 100%;
+  width: 80px;
+}
+
+.volume-control .volume {
+    -webkit-appearance: slider-horizontal;
+    width: 75px;
+}
