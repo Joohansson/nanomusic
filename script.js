@@ -692,7 +692,7 @@ function schedule_next(){
       // update stats
       var hash = collected_blocks[blockSeq][2][xCount][0]
       var amount = collected_blocks[blockSeq][2][xCount][1]
-      document.getElementById("currentHash").innerHTML = '<a target="_blank" href="https://nanocrawler.cc/explorer/block/' + hash + '">' + hash + '</a> | ' + amount + ' ► Note: ' + n + " - " + b
+      document.getElementById("currentHash").innerHTML = '<a target="_blank" href="' + block_explorer  + hash + '">' + hash + '</a> | ' + amount + ' ► Note: ' + n + " - " + b
   	} else {
   		trigger_light(xCount, false, 1)
   	}
