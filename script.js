@@ -715,6 +715,7 @@ function schedule_next(){
   	}
   }
   else {
+    playing = false
     check_for_new_content()
   }
 }
