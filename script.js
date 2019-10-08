@@ -180,6 +180,7 @@ function update_current_notes(xx) {
 //send dummy tones to initialize the graphics
 function dummy_notes() {
   transactions = []
+  transactions_last = 0
   hashes = [
     "000000000000000000000000000000000000000000000000000000000000000",
     "1111111111111111111111111111111111111111111111111111111111111111",
@@ -612,6 +613,7 @@ $(document).ready(function(){
       if (has_init) {
           dummy_notes()
           should_reset = true
+          document.getElementById("currentSequence").innerHTML = "Blocks Queued: " + (transactions.length-transactions_last) + " | Melody Sequence: " + blockSeq + " / " + (collected_blocks.length)
       }
   })
 
