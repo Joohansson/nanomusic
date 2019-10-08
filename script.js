@@ -33,6 +33,8 @@ var should_reset = false //if the next loop should restart from 0 collected bloc
 var melody_interval = 5000 //initial delay
 var transactions_last = 0 //last processed melody length
 var playing = false //currently playing
+var noise_counter = 0.0
+var customPass = null
 
 var chords = [["B1", "F#1", "F#2", "B2", "F#3", "B3", "D3", "A3", "D4", "E4", "A4", "D5"],
 ["B2", "F#2", "B3", "F#3", "D2", "E2", "A2", "D3", "E3", "A3", "D4"],
@@ -296,8 +298,8 @@ function init() {
         })
     window.addEventListener("resize", on_window_resize, !1)
 
-	   renderer.setClearColor(0x000000)
-	    renderer.setPixelRatio( window.devicePixelRatio )
+	  renderer.setClearColor(0x000000)
+	  renderer.setPixelRatio( window.devicePixelRatio )
     renderer.setSize(window.innerWidth, window.innerHeight)
     renderer.autoClear = false
 
@@ -311,9 +313,26 @@ function init() {
     bloomPass.clear = true
 
     //var effectFilm = new THREE.FilmPass(1, .05, 128, false)
-    var effectFilm = new THREE.FilmPass(0.7, .05, 648, false)
-    effectFilm.renderToScreen = true
+    var effectFilm = new THREE.FilmPass(0.0, .01, 648, false)
+    //effectFilm.renderToScreen = true
     composer.addPass(effectFilm)
+
+    //custom shader pass for noise
+    var vertShader = document.getElementById('vertexShader').textContent;
+    var fragShader = document.getElementById('fragmentShader').textContent;
+    var myEffect = {
+      uniforms: {
+        "tDiffuse": { value: null },
+        "amount": { value: noise_counter }
+      },
+      vertexShader: vertShader,
+      fragmentShader: fragShader
+    }
+
+    customPass = new THREE.ShaderPass(myEffect);
+    customPass.renderToScreen = true;
+    composer.addPass(customPass);
+
     //container = document.getElementById( 'container' )
     //container.appendChild( renderer.domElement )
 
@@ -659,9 +678,13 @@ function render() {
     renderer.clear()
     composer.render(delta)
     requestAnimationFrame( render )
+
+    //noise generator
+    noise_counter += 0.01;
+    customPass.uniforms["amount"].value = noise_counter;
+
     TWEEN.update()
 }
-
 
 function on_window_resize() {
     camera.left = window.innerWidth / - 2
