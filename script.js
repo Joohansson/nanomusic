@@ -246,7 +246,8 @@ function text_generator(amount, hash, type) {
             elem.style.opacity = 0.8
         }
         if (elem.style.opacity > 0.025) {
-            elem.style.opacity -= 0.025
+            //increase fadeout time while the block queue grows, to mitigate the browser from overloading during high traffic
+            elem.style.opacity -= (0.025 + (transactions.length-transactions_last) / 10000)
         } else {
             elem.remove()
             clearInterval(fadeEffect)
