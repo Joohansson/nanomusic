@@ -27,6 +27,11 @@ canvas {
   padding: 5px
 }
 
+#info-button {
+    color: #4a90e2;
+    font-weight: bold;
+}
+
 .info-container {
   margin: 10px 0 0 10px;
 }
@@ -171,6 +176,11 @@ canvas {
 
   height:100%;
   width:100%;
+}
+
+#content-background {
+  background-color: rgba(255,255,255,0.2);
+  padding: 15px 20px;
 }
 
 .hidden {
