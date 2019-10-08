@@ -26,13 +26,13 @@ var socket_nano_main
 var socket_nano_beta
 var netSelected = 0 //0=main, 1=beta
 var interpretation = 0 //0=hash note, 1=amount note
-
 var transactions = []
 var new_blocks = false //indicate when new blocks has arrived
 var has_init = false //indicate first init, to avoid double init melodies when using the slider
 var should_reset = false //if the next loop should restart from 0 collected blocks
-var melody_interval = 20000 //initial delay
+var melody_interval = 5000 //initial delay
 var transactions_last = 0 //last processed melody length
+var playing = false //currently playing
 
 var chords = [["B1", "F#1", "F#2", "B2", "F#3", "B3", "D3", "A3", "D4", "E4", "A4", "D5"],
 ["B2", "F#2", "B3", "F#3", "D2", "E2", "A2", "D3", "E3", "A3", "D4"],
@@ -681,6 +681,7 @@ var xCount = 0
 function schedule_next(){
   if (collected_blocks.length != 0) {
     //play note
+    playing = true
     if (xCount == 0 ) {
     	var col = new THREE.Color(current_colors[0])
     	renderer.setClearColor(col, .25)
@@ -706,6 +707,7 @@ function schedule_next(){
   		Tone.Transport.scheduleOnce(schedule_next, ("+" + b))
   		xCount++
   	} else {
+      playing = false
   		blockSeq++
       //console.log("Sequence:" + blockSeq + " / " + (collected_blocks.length))
       document.getElementById("currentSequence").innerHTML = "Blocks Queued: " + (transactions.length-transactions_last) + " | Melody Sequence: " + blockSeq + " / " + (collected_blocks.length)
@@ -750,7 +752,10 @@ function play_note(n, b, v, s, x) {
 
 //melody interval
 setInterval(function() {
+  //only add a new melody if not currently playing or if the melody is full (this will make the music less repetitive)
+  if (!playing || (transactions.length - transactions_last) >= 64) {
     define_content()
+  }
 }, melody_interval)
 
 const mainSocketMessageListener = (event) => {
