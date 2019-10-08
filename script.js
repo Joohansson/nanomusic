@@ -305,18 +305,17 @@ function init() {
 
     composer.addPass(renderPass)
 
-    var bloomPass = new THREE.BloomPass(1,25,5,128)
+    var bloomPass = new THREE.BloomPass(0.8,25,8,256)
     composer.addPass(bloomPass)
     bloomPass.clear = true
 
-    var effectFilm = new THREE.FilmPass(1, .05, 128, false)
+    //var effectFilm = new THREE.FilmPass(1, .05, 128, false)
+    var effectFilm = new THREE.FilmPass(1, .00, 256, false)
     effectFilm.renderToScreen = true
     composer.addPass(effectFilm)
     //container = document.getElementById( 'container' )
     //container.appendChild( renderer.domElement )
 
-    // container = document.getElementById( 'container' )
-    // container.appendChild( renderer.domElement )
     var mesh = new THREE.SphereGeometry(300,300,12)
 	  var vat2 = new THREE.MeshBasicMaterial()
 	  //vat2.blending = THREE.AdditiveBlending
