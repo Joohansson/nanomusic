@@ -306,12 +306,12 @@ function init() {
 
     composer.addPass(renderPass)
 
-    var bloomPass = new THREE.BloomPass(0.8,25,8,128)
+    var bloomPass = new THREE.BloomPass(0.85,25,8,128)
     composer.addPass(bloomPass)
     bloomPass.clear = true
 
     //var effectFilm = new THREE.FilmPass(1, .05, 128, false)
-    var effectFilm = new THREE.FilmPass(1, .00, 128, false)
+    var effectFilm = new THREE.FilmPass(0.7, .05, 648, false)
     effectFilm.renderToScreen = true
     composer.addPass(effectFilm)
     //container = document.getElementById( 'container' )
@@ -348,8 +348,6 @@ function init() {
     scene.add( cubes )
     scene.add( spotLight )
     //scene.add( ambient_light )
-
-    var ran = Math.floor(Math.random() * 50)
 
     check_for_new_content()
     render()
