@@ -97,11 +97,7 @@ var tick = 0,
 function mute_sound() {
     Tone.Master.mute = !Tone.Master.mute
     muted = !muted
-
-    Cookies.set("muted", muted, {
-        path: '',
-        expires: 365
-    })
+    mute_state = muted
 }
 
 var osc, reverb, feedbackDelay, feedbackDelay2, feedbackDelay3, wider, eq, synthEQ, synth, polySynth, conga, congaPart, noise, autoFilter
@@ -313,12 +309,6 @@ function init() {
     renderer = new THREE.WebGLRenderer( {canvas: e,alpha: true, antialias:true} )
     var t = e.getContext("2d")
     e = document.getElementById("canvas")
-
-    // mute button
-    document.getElementById("speaker").addEventListener("click", function(e) {
-        this.classList.toggle('is-muted')
-        mute_sound()
-    })
 
     for (var p = document.getElementById("address-info"), b = document.getElementsByClassName("address-button"), E = 0; E < b.length; E++)
         b[E].addEventListener("click", function(e) {
@@ -742,6 +732,16 @@ $(document).ready(function(){
     }
   })
 
+  // mute button
+  document.getElementById("speaker").addEventListener("click", function(e) {
+      this.classList.toggle('is-muted')
+      mute_sound()
+      Cookies.set("muted", muted, {
+          path: '',
+          expires: 365
+      })
+  })
+
   //restore volume from cookie
   var vol = Cookies.get('volume')
   if(vol != undefined) {
@@ -753,6 +753,7 @@ $(document).ready(function(){
   if(cookie_mute != undefined) {
     mute_state = cookie_mute
     if(cookie_mute == true) {
+      console.log("Muted")
       document.getElementById("speaker").classList.toggle('is-muted')
     }
   }
