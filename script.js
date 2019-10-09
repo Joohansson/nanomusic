@@ -827,13 +827,20 @@ function schedule_next(){
 
       //clean up collected blocks if there are no queued
       if (collected_blocks.length == blockSeq) {
-        while (collected_blocks.length > 1) {
+        while (collected_blocks.length > 0) {
           collected_blocks.shift()
-          blockSeq = 1
+          blockSeq = 0
         }
       }
 
-      document.getElementById("currentSequence").innerHTML = "Blocks Queued: " + (transactions.length-transactions_last) + " | Melody Sequence: " + blockSeq + " / " + (collected_blocks.length)
+      //clean up collected blocks if too many
+      while (collected_blocks.length > 999) {
+        collected_blocks.shift()
+        blockSeq--
+        if (blockSeq < 0) {
+          blockSeq = 0
+        }
+      }
   		check_for_new_content()
   	}
   }
@@ -849,6 +856,7 @@ function check_for_new_content() {
 			update_current_notes(Math.floor(Math.random() * chords.length))
 			xCount = 0
       create_grid(collected_blocks[blockSeq])
+      document.getElementById("currentSequence").innerHTML = " Melody Sequence: " + (blockSeq+1) + " / " + (collected_blocks.length)
 			Tone.Transport.scheduleOnce(schedule_next, ("+1m"))
 		} else {
 			//update_transaction_display(collected_blocks[blockSeq][2][0])
@@ -949,7 +957,7 @@ function processSocket(data) {
 
   //randomize the amount on screen
   text_generator(txData.amount, txData.hash, txData.subtype)
-  document.getElementById("currentSequence").innerHTML = "Blocks Queued: " + (transactions.length-transactions_last) + " | Melody Sequence: " + blockSeq + " / " + (collected_blocks.length)
+  document.getElementById("currentQueue").innerHTML = "Blocks Queued: " + (transactions.length-transactions_last) + " "
 }
 
 var mode = function mode(arr) {
