@@ -34,23 +34,20 @@ const block_explorer_main = "https://nanocrawler.cc/explorer/block/"
 const block_explorer_beta = "https://beta.nanocrawler.cc/explorer/block/"
 var block_explorer = block_explorer_main
 
-//var socket_nano_main = new WebSocket(url_nano_main)
-//var socket_nano_beta = new WebSocket(url_nano_beta)
 var socket_nano_main
 var socket_nano_beta
 var netSelected = 0 //0=main, 1=beta
 var interpretation = 0 //0=hash note, 1=amount note
 var transactions = []
-var new_blocks = false //indicate when new blocks has arrived
 var has_init = false //indicate first init, to avoid double init melodies when using the slider
 var should_reset = false //if the next loop should restart from 0 collected blocks
-var melody_interval = 5000 //initial delay
+var melody_interval = 8000
 var transactions_last = 0 //last processed melody length
 var playing = false //currently playing
 var noise_counter = 0.0
 var customPass = null
 var muted = false
-var volumeval = 50
+var volumeval = 50 //current inverted volume
 
 var chords = [["B1", "F#1", "F#2", "B2", "F#3", "B3", "D3", "A3", "D4", "E4", "A4", "D5"],
 ["B2", "F#2", "B3", "F#3", "D2", "E2", "A2", "D3", "E3", "A3", "D4"],
@@ -217,8 +214,6 @@ function dummy_notes() {
     }
     transactions.push(txData)
   }
-
-  new_blocks = true
   define_content()
   //transactions = [] //if not using this, the new blocks will append to the dummy melody
 }
@@ -263,7 +258,7 @@ function text_generator(amount, hash, type) {
     elem.style.fontSize = size + "px"
     elem.style.position = "absolute"
     elem.style.left = left_pos + 50 + "px"
-    elem.style.top = Math.round(Math.random() * (fullHeight)) + 150 + "px"
+    elem.style.top = Math.round(Math.random() * (fullHeight)) + 150 - (size/2) + "px"
     elem.classList.add("floating-text")
 
     //fadeout effect
@@ -550,8 +545,8 @@ function write_to_dic(mel, beats, info, vel, scale) {
 
 // create melody of transactions in the buffer
 function define_content() {
-    // only create new melody if new blocks has arrived
-    if (!new_blocks) {
+    //do not create melody if no new blocks
+    if (transactions.length == transactions_last) {
       return
     }
     discarded = transactions.length - 128
@@ -609,7 +604,6 @@ function define_content() {
     // play the melody
     //console.log(new_melody)
     write_to_dic(new_melody, new_beats, transaction_info, new_velocity, new_scale)
-    new_blocks = false //disable repeating the melody if no new blocks
 }
 
 function create_grid(content) {
@@ -795,6 +789,7 @@ function check_for_new_content() {
     collected_blocks = []
     blockSeq = 0
     should_reset = false
+    playing = false
   }
 }
 
@@ -878,7 +873,6 @@ function processSocket(data) {
 
 	//console.log(txData)
   transactions.push(txData)
-  new_blocks = true
 
   //randomize the amount on screen
   text_generator(txData.amount, txData.hash, txData.subtype)
