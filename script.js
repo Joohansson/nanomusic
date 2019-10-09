@@ -227,7 +227,7 @@ function text_generator(amount, hash, type) {
     if (!has_init) {
       return
     }
-    var fullWidth = window.innerWidth-200
+    var fullWidth = window.innerWidth-100
     var fullHeight = window.innerHeight-200
 
     var elem = document.createElement("div")
@@ -236,8 +236,8 @@ function text_generator(amount, hash, type) {
     if (size < 10) {
         size = 10
     }
-    if (size > 80) {
-        size = 80
+    if (size > 60) {
+        size = 60
     }
 
     //base the fading time from amount
@@ -253,10 +253,17 @@ function text_generator(amount, hash, type) {
         elem.innerHTML = '<a target="_blank" href="' + block_explorer + hash + '">►' + amount.toFixed(4) + '</a>'
     }
 
+    left_pos = Math.round(Math.random() * (fullWidth))
+    digits = Math.floor(Math.log10(amount))+1+6 //integer digit count plus decimals
+    //avoid the text to go outside the screen (reduce the position by the length of the object)
+    if (left_pos > fullWidth - (size*0.9*digits)) {
+      left_pos = fullWidth - (size*0.9*digits)
+    }
+
     elem.style.fontSize = size + "px"
     elem.style.position = "absolute"
-    elem.style.left = Math.round(Math.random() * (fullWidth)) + "px"
-    elem.style.top = Math.round(Math.random() * (fullHeight)) + 100 + "px"
+    elem.style.left = left_pos + 50 + "px"
+    elem.style.top = Math.round(Math.random() * (fullHeight)) + 150 + "px"
     elem.classList.add("floating-text")
 
     //fadeout effect
