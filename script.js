@@ -751,9 +751,9 @@ $(document).ready(function(){
   //restore mute state from cookie
   var cookie_mute = Cookies.get('muted')
   if(cookie_mute != undefined) {
-    mute_state = cookie_mute
-    if(cookie_mute == true) {
+    if(cookie_mute == 'true') {
       console.log("Muted")
+      mute_state = true
       document.getElementById("speaker").classList.toggle('is-muted')
     }
   }
