@@ -251,8 +251,8 @@ function text_generator(amount, hash, type) {
     left_pos = Math.round(Math.random() * (fullWidth))
     digits = Math.floor(Math.log10(amount))+1+6 //integer digit count plus decimals
     //avoid the text to go outside the screen (reduce the position by the length of the object)
-    if (left_pos > fullWidth - (size*0.9*digits)) {
-      left_pos = fullWidth - (size*0.9*digits)
+    if (left_pos > fullWidth - (size*digits)) {
+      left_pos = fullWidth - (size*digits)
     }
 
     elem.style.fontSize = size + "px"
