@@ -752,7 +752,6 @@ $(document).ready(function(){
   var cookie_mute = Cookies.get('muted')
   if(cookie_mute != undefined) {
     if(cookie_mute == 'true') {
-      console.log("Muted")
       mute_state = true
       document.getElementById("speaker").classList.toggle('is-muted')
     }
@@ -813,12 +812,23 @@ function schedule_next(){
 
   	if (xCount  < collected_blocks[blockSeq][0].length-1) {
   		//schedule the next event relative to the current time by prefixing "+"
+      //console.log("Schedule next")
   		Tone.Transport.scheduleOnce(schedule_next, ("+" + b))
   		xCount++
   	} else {
+      //console.log("Update")
       playing = false
   		blockSeq++
       //console.log("Sequence:" + blockSeq + " / " + (collected_blocks.length))
+
+      //clean up collected blocks if there are no queued
+      if (collected_blocks.length == blockSeq) {
+        while (collected_blocks.length > 1) {
+          collected_blocks.shift()
+          blockSeq = 1
+        }
+      }
+
       document.getElementById("currentSequence").innerHTML = "Blocks Queued: " + (transactions.length-transactions_last) + " | Melody Sequence: " + blockSeq + " / " + (collected_blocks.length)
   		check_for_new_content()
   	}
