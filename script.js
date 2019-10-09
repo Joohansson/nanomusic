@@ -619,6 +619,10 @@ function create_grid(content) {
     var the_floor = ((totalWidth) * .5) - (fixedWidthOfOneUnit * .5)
 
     var geometry = new THREE.BoxGeometry(fixedWidthOfOneUnit, window.innerHeight, 50)
+
+    //clean previous cube children or it will build up and eventually freeze the browser
+    cubes.children = []
+
     for (var x = 0; x < transaxx; x++) {
         material = new THREE.MeshBasicMaterial({
                     })
@@ -844,8 +848,7 @@ function check_for_new_content() {
 		if (collected_blocks[blockSeq][0].length > 0) {
 			update_current_notes(Math.floor(Math.random() * chords.length))
 			xCount = 0
-			create_grid(collected_blocks[blockSeq])
-
+      create_grid(collected_blocks[blockSeq])
 			Tone.Transport.scheduleOnce(schedule_next, ("+1m"))
 		} else {
 			//update_transaction_display(collected_blocks[blockSeq][2][0])
