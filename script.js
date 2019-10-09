@@ -96,6 +96,11 @@ var tick = 0,
 function mute_sound() {
     Tone.Master.mute = !Tone.Master.mute
     muted = !muted
+
+    Cookies.set("muted", muted, {
+        path: '',
+        expires: 365
+    })
 }
 
 var osc, reverb, feedbackDelay, feedbackDelay2, feedbackDelay3, wider, eq, synthEQ, synth, polySynth, conga, congaPart, noise, autoFilter
@@ -635,8 +640,6 @@ function create_grid(content) {
 }
 
 $(document).ready(function(){
-	var $start = document.querySelector('#play_button')
-
   //Switches
   $('#net-switch').change(function() {
    if($(this).is(":checked")) {
@@ -660,7 +663,7 @@ $(document).ready(function(){
 
   //Handle automatic cookies for all checkboxes. Using js.cookie.js plugin
   $('input[type=checkbox]').each(function() {
-    var mycookie = Cookies.get($(this).attr('name'));
+    var mycookie = Cookies.get($(this).attr('name'))
 
     if (mycookie == 'true') {
       $(this).prop('checked', true)
@@ -710,6 +713,7 @@ $(document).ready(function(){
   })
 
 	//init()
+  var $start = document.querySelector('#play_button')
 	$(".play_button").show()
 	$(".play_button").click(function(){
     Tone.start()
@@ -722,11 +726,27 @@ $(document).ready(function(){
 
   $(".volume-chooser").on("input", ".volume", function(e){
     volumeval = $(e.currentTarget).val()
+    Cookies.set("volume", volumeval, {
+        path: '',
+        expires: 365
+    })
     if(!muted) {
       var volume = Tone.Master;
         volume.set("volume", -(50-volumeval));
     }
   })
+
+  //restore volume from cookie
+  var vol = Cookies.get('volume')
+  if(vol != undefined) {
+    $('.volume-chooser .volume').val(vol)
+  }
+
+  //restore mute state from cookie
+  var mute_state = Cookies.get('muted')
+  if(muted != undefined) {
+    Tone.Master.mute = mute_state
+  }
 })
 
 function render() {
