@@ -47,6 +47,7 @@ var playing = false //currently playing
 var noise_counter = 0.0
 var customPass = null
 var muted = false
+var mute_state = false //initial mute state from cookie
 var volumeval = 50 //current inverted volume
 
 var chords = [["B1", "F#1", "F#2", "B2", "F#3", "B3", "D3", "A3", "D4", "E4", "A4", "D5"],
@@ -106,6 +107,11 @@ function mute_sound() {
 var osc, reverb, feedbackDelay, feedbackDelay2, feedbackDelay3, wider, eq, synthEQ, synth, polySynth, conga, congaPart, noise, autoFilter
 
 function start_tone_stuff(){
+  //set mute state
+  if (mute_state == true) {
+    mute_sound()
+  }
+
   reverb = new Tone.Freeverb(.95).toMaster()
 	reverb.dampening.value = 3000
 	feedbackDelay = new Tone.FeedbackDelay("6n", .75).toMaster()
@@ -743,9 +749,12 @@ $(document).ready(function(){
   }
 
   //restore mute state from cookie
-  var mute_state = Cookies.get('muted')
-  if(muted != undefined) {
-    Tone.Master.mute = mute_state
+  var cookie_mute = Cookies.get('muted')
+  if(cookie_mute != undefined) {
+    mute_state = cookie_mute
+    if(cookie_mute == true) {
+      document.getElementById("speaker").classList.toggle('is-muted')
+    }
   }
 })
 
