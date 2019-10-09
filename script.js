@@ -637,27 +637,57 @@ function create_grid(content) {
 $(document).ready(function(){
 	var $start = document.querySelector('#play_button')
 
-  document.getElementById("net-switch").addEventListener('change', (event) => {
-      if (event.target.checked) {
-          netSelected = 1
-          block_explorer = block_explorer_beta
-      } else {
-          netSelected = 0
-          block_explorer = block_explorer_main
-      }
-      if (has_init) {
-          dummy_notes()
-          should_reset = true
-          document.getElementById("currentSequence").innerHTML = "Blocks Queued: " + (transactions.length-transactions_last) + " | Melody Sequence: " + blockSeq + " / " + (collected_blocks.length)
-      }
+  //Switches
+  $('#net-switch').change(function() {
+   if($(this).is(":checked")) {
+     netSelected = 1
+     block_explorer = block_explorer_beta
+   }
+   else {
+     netSelected = 0
+     block_explorer = block_explorer_main
+   }
   })
 
-  document.getElementById("note-switch").addEventListener('change', (event) => {
-      if (event.target.checked) {
-          interpretation = 1
-      } else {
-          interpretation = 0
+  $('#note-switch').change(function() {
+    if($(this).is(":checked")) {
+      interpretation = 1
+    }
+    else {
+      interpretation = 0
+    }
+  });
+
+  //Handle automatic cookies for all checkboxes. Using js.cookie.js plugin
+  $('input[type=checkbox]').each(function() {
+    var mycookie = Cookies.get($(this).attr('name'));
+
+    if (mycookie == 'true') {
+      $(this).prop('checked', true)
+      if ($(this).attr('name') == 'net-switch') {
+        netSelected = 1
+        block_explorer = block_explorer_beta
       }
+      if ($(this).attr('name') == 'note-switch') {
+        interpretation = 1
+      }
+    }
+    else if (mycookie == 'false') {
+      $(this).prop('checked', false)
+      if ($(this).attr('name') == 'net-switch') {
+        netSelected = 0
+        block_explorer = block_explorer_main
+      }
+      if ($(this).attr('name') == 'note-switch') {
+        interpretation = 0
+      }
+    }
+  })
+  $('input[type=checkbox]').change(function() {
+    Cookies.set($(this).attr("name"), $(this).prop('checked'), {
+        path: '',
+        expires: 365
+    })
   })
 
   document.getElementById("info-button").addEventListener("click", function(e) {
