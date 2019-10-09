@@ -328,7 +328,7 @@ function init() {
 
     composer.addPass(renderPass)
 
-    var bloomPass = new THREE.BloomPass(0.85,25,8,128)
+    var bloomPass = new THREE.BloomPass(0.9,25,7,128)
     composer.addPass(bloomPass)
     bloomPass.clear = true
 
@@ -619,7 +619,7 @@ function create_grid(content) {
     var the_floor = ((totalWidth) * .5) - (fixedWidthOfOneUnit * .5)
 
     var geometry = new THREE.BoxGeometry(fixedWidthOfOneUnit, window.innerHeight, 50)
-    for (var x = transaxx - 1; x > -1; x--) {
+    for (var x = 0; x < transaxx; x++) {
         material = new THREE.MeshBasicMaterial({
                     })
         material.color.setHex (0x00ffff)
