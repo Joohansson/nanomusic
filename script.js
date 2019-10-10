@@ -119,28 +119,22 @@ function sleep(tone_delay) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-var osc, reverb, feedbackDelay, feedbackDelay2, feedbackDelay3, wider, eq, synthEQ, synth, polySynth, conga, congaPart, noise, autoFilter
+var reverb, feedbackDelay, feedbackDelay2, wider, eq, eq_synth, synth, polySynth, noise, autoFilter
 
 function start_tone_stuff(){
-  //set mute state
-  if (mute_state == true) {
-    mute_sound()
-  }
+  Tone.Master.mute = true //mute to avoid strange sound that kills the speaker
 
-  reverb = new Tone.Freeverb(.95).toMaster()
-	reverb.dampening.value = 3000
+  reverb = new Tone.Freeverb().toMaster()
+	reverb.dampening.value = 1000
 	feedbackDelay = new Tone.FeedbackDelay("6n", .75).toMaster()
-	feedbackDelay3 = new Tone.FeedbackDelay("1n", 0.55).toMaster()
 
-	wider = new Tone.StereoWidener (1).connect(reverb)
-	feedbackDelay2 = new Tone.PingPongDelay("3n", .25).connect(wider)
-	//var stereoFeed = new Tone.StereoFeedbackEffect ().connect(feedbackDelay2)
+	//wider = new Tone.StereoWidener(1).connect(reverb) //this is making a heavy click sound when initialized
+	feedbackDelay2 = new Tone.PingPongDelay("3n", .5).connect(reverb)
 
-	eq = new Tone.EQ3(-5, 3, -9).connect(feedbackDelay2)
+	eq = new Tone.EQ3(5, -5, -15).connect(feedbackDelay2)
+  eq_synth = new Tone.EQ3(-2, 1, -4).connect(feedbackDelay)
 
-	synthEQ = new Tone.EQ3(-10, -1, 3).connect(feedbackDelay)
-
-	synth = new Tone.FMSynth().connect(feedbackDelay)
+	synth = new Tone.FMSynth().connect(eq_synth)
 	synth.set({
 		harmonicity:3,
 		modulationIndex:3.5,
@@ -163,7 +157,7 @@ function start_tone_stuff(){
 			sustain:1,
 			release:0.5
 	}})
-	synth.volume.value = -5
+	synth.volume.value = -8
 	feedbackDelay.wet.value = .5
 
 	polySynth = new Tone.PolySynth(4, Tone.MonoSynth).connect(eq)
@@ -176,20 +170,21 @@ function start_tone_stuff(){
 	        "releaseCurve" : "exponential"
 	    }
 	})
-	polySynth.volume.value = -55
+	polySynth.volume.value = -60
 
 	var loop2 = new Tone.Loop(function(time){
-	    polySynth.triggerAttackRelease(current_notes[Math.floor(Math.random() * (current_notes.length - 5))], "1m")
+	    polySynth.triggerAttackRelease(current_notes[Math.floor(Math.random() * (current_notes.length - 4))], "2m")
 	}, beat_lengths[Math.floor(Math.random() * beat_lengths.length)]).start()
+  /*
 	conga = new Tone.MembraneSynth({
 	    "pitchDecay" : 0.004,
-	    "octaves" : 4,
+	    "octaves" : 2,
 	    "envelope" : {
 	        "attack" : 0.0005,
 	        "decay" : 0.4,
 	        "sustain" : 0
 	    }
-	}).connect(feedbackDelay)
+	}).connect(feedbackDelay)*/
 	//conga.volume.value = -100
 	//congaPart = new Tone.Sequence(function(time, pitch){
 	//   conga.triggerAttack(pitch, time, Math.random()*0.5 + 0.5)
@@ -199,7 +194,7 @@ function start_tone_stuff(){
 	noise.volume.value = -40
 	//make an autofilter to shape the noise
 	autoFilter = new Tone.AutoFilter({
-		"frequency" : "20m",
+		"frequency" : "10m",
 		"min" : 300,
 		"max" : 1000
 	}).connect(reverb)
@@ -310,7 +305,7 @@ function text_generator(amount, hash, type) {
     document.body.appendChild(elem)
 }
 
-function init() {
+async function init() {
     has_init = true
 	  start_tone_stuff()
     var e = document.createElement("canvas")
@@ -414,10 +409,24 @@ function init() {
     scene.add( spotLight )
     //scene.add( ambient_light )
 
-    check_for_new_content()
+
     render()
 
     dummy_notes()
+    await sleep('1m')
+
+    //set mute state
+    if (mute_state == true) {
+      mute_sound()
+    }
+    else {
+      Tone.Master.mute = false
+    }
+
+    check_for_new_content()
+
+    mainSocketCloseListener()
+    betaSocketCloseListener()
 }
 
 function trigger_light(x, amount, hasPitch, scale, type) {
@@ -463,7 +472,7 @@ function interpret_amount_beat(val) {
 	} else if ((val >= 1000) && (val < 10000)) {
 		return "1n"
 	} else {
-		return "1m"
+		return "2m"
 	}
 }
 
@@ -998,9 +1007,6 @@ const betaSocketCloseListener = (event) => {
   socket_nano_beta.addEventListener('message', betaSocketMessageListener)
   socket_nano_beta.addEventListener('close', betaSocketCloseListener)
 }
-
-mainSocketCloseListener()
-betaSocketCloseListener()
 
 // read data from websocket callback
 function processSocket(data) {
