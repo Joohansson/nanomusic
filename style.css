@@ -126,6 +126,13 @@ canvas {
   opacity: 0.8;
 }
 
+.play_button p {
+  position: absolute;
+  top: 265px;
+  text-align: center;
+  width: 100%;
+}
+
 .explain {
   line-height: 18px;
 }
