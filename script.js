@@ -1,4 +1,4 @@
-/**A SMALL PART OF THE CODE BELOW IS USING CODE FROM POLYMER
+/**THE MUTE BUTTON BELOW TO POLYMER
  * @license
  * Copyright (c) 2017 The Polymer Project Authors. All rights reserved.
  * This code may only be used under the BSD style license found at
@@ -50,6 +50,7 @@ var customPass = null
 var muted = false
 var mute_state = false //initial mute state from cookie
 var volumeval = 50 //current inverted volume
+const base_measure = 2500 //length in ms of one measure (1m) when not using Tone.js transport
 
 var chords = [
 ["B1", "F#1", "F#2", "B2", "F#3", "B3", "D3", "A3", "D4", "E4", "A4"],
@@ -103,6 +104,19 @@ function mute_sound() {
     Tone.Master.mute = !Tone.Master.mute
     muted = !muted
     mute_state = muted
+}
+
+//sleep based on Tone.js measure of 2 seconds (because Tone.transport does not work very well with random stops)
+function sleep(tone_delay) {
+  var ms = 0
+  if (tone_delay.includes('m')) {
+    ms = base_measure * tone_delay.replace('m','')
+  }
+  else if (tone_delay.includes('n')) {
+    ms = base_measure / tone_delay.replace('n','')
+  }
+
+  return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 var osc, reverb, feedbackDelay, feedbackDelay2, feedbackDelay3, wider, eq, synthEQ, synth, polySynth, conga, congaPart, noise, autoFilter
@@ -531,7 +545,6 @@ function interpret_amount_note(val, type){
 }
 
 function interpret_cube_color(val,type){
-  console.log(type)
   if (type=='send') {
     if (val < .001) {
   		return current_colors_send[8]
@@ -623,42 +636,27 @@ function define_content() {
 
     transactions_last = transactions.length
 
-    if (transactions.length == 0) {
-    	var one_info = []
-		    //one_info.push(this_tx.block_id)
-		    one_info.push("0")
-        one_info.push(0)
-        one_info.push('')
-        transaction_info.push(one_info)
-    } else {
-    	for (var xx = 0; xx < transactions.length; xx++ ) {
-	        var one_info = []
-	        this_tx = transactions[xx]
+  	for (var xx = 0; xx < transactions.length; xx++ ) {
+        var one_info = []
+        this_tx = transactions[xx]
 
-          let amount = this_tx.amount
-          let type = this_tx.subtype
-	        one_info.push(this_tx.hash)
-	        one_info.push(amount.toFixed(4))
-          one_info.push(type)
-	        transaction_info.push(one_info)
-	        if (this_tx.amount == 0) {
-	            new_melody.push('C7')
-	            new_beats.push("4n")
-	            new_velocity.push(0)
-	            //newMelody.push(["4n", null])
-	        } else {
-	            new_beats.push(interpret_amount_beat(amount))
-              if (interpretation == 0) {
-                new_melody.push(interpret_hash(this_tx.hash, type))
-              }
-              else if (interpretation == 1){
-                new_melody.push(interpret_amount_note(amount, type))
-              }
-	            new_velocity.push(interpret_amount_vel(amount))
-	            new_scale.push(interpret_amount_scale(amount))
-	        }
-    	}
-    }
+        let amount = this_tx.amount
+        let type = this_tx.subtype
+        one_info.push(this_tx.hash)
+        one_info.push(amount.toFixed(4))
+        one_info.push(type)
+        transaction_info.push(one_info)
+
+        new_beats.push(interpret_amount_beat(amount))
+        if (interpretation == 0) {
+          new_melody.push(interpret_hash(this_tx.hash, type))
+        }
+        else if (interpretation == 1){
+          new_melody.push(interpret_amount_note(amount, type))
+        }
+        new_velocity.push(interpret_amount_vel(amount))
+        new_scale.push(interpret_amount_scale(amount))
+  	}
     // play the melody
     //console.log(new_melody)
     write_to_dic(new_melody, new_beats, transaction_info, new_velocity, new_scale)
@@ -847,9 +845,9 @@ function on_window_resize() {
 //setInterval(update_data(), delay)
 var blockSeq = 0
 var xCount = 0
-function schedule_next(){
+//play note
+async function schedule_next(){
   if (collected_blocks.length != 0) {
-    //play note
     playing = true
     if (xCount == 0 ) {
     	var col = new THREE.Color(current_colors[0])
@@ -859,26 +857,24 @@ function schedule_next(){
   	var b = collected_blocks[blockSeq][1][xCount]
   	var v = collected_blocks[blockSeq][3][xCount]
   	var s = collected_blocks[blockSeq][4][xCount]
-  	if (n !== "C7") {
-  		console.log(n, b, v, s, xCount)
-      let hash = collected_blocks[blockSeq][2][xCount][0]
-      let amount = collected_blocks[blockSeq][2][xCount][1]
-      let type = collected_blocks[blockSeq][2][xCount][2]
-  		play_note(n,b,v, s, xCount, amount, type)
 
-      // update stats
-      document.getElementById("currentHash").innerHTML = '<a target="_blank" href="' + block_explorer  + hash + '">' + hash + '</a> | ' + amount + ' | ' + type + ' ► Note: ' + n + " - " + b
-  	} else {
-  		trigger_light(xCount, 0, false, 1, '')
-  	}
+		//console.log(n, b, v, s, xCount)
+    let hash = collected_blocks[blockSeq][2][xCount][0]
+    let amount = collected_blocks[blockSeq][2][xCount][1]
+    let type = collected_blocks[blockSeq][2][xCount][2]
+		play_note(n,b,v, s, xCount, amount, type)
+
+    // update stats
+    document.getElementById("currentHash").innerHTML = '<a target="_blank" href="' + block_explorer  + hash + '">' + hash + '</a> | ' + amount + ' | ' + type + ' ► Note: ' + n + " - " + b
 
   	if (xCount  < collected_blocks[blockSeq][0].length-1) {
-  		//schedule the next event relative to the current time by prefixing "+"
-      console.log("Schedule next")
-  		Tone.Transport.scheduleOnce(schedule_next, ("+" + b))
-  		xCount++
+      xCount++
+      await sleep(b)
+      schedule_next()
+      //schedule the next event relative to the current time by prefixing "+"
+  		//Tone.Transport.scheduleOnce(schedule_next, ("+" + b))
+
   	} else {
-      console.log("Update")
       playing = false
   		blockSeq++
       //console.log("Sequence:" + blockSeq + " / " + (collected_blocks.length))
@@ -908,24 +904,28 @@ function schedule_next(){
   }
 }
 
-function check_for_new_content() {
+async function check_for_new_content() {
 	if (collected_blocks[blockSeq] !== undefined) {
 		if (collected_blocks[blockSeq][0].length > 0) {
-      console.log("Update1")
 			update_current_notes(Math.floor(Math.random() * chords.length))
 			xCount = 0
       create_grid(collected_blocks[blockSeq])
+      document.getElementById("currentQueue").innerHTML = "Blocks Queued: " + (transactions.length-transactions_last) + " "
       document.getElementById("currentSequence").innerHTML = " Melody Sequence: " + (blockSeq+1) + " / " + (collected_blocks.length)
-			Tone.Transport.scheduleOnce(schedule_next, ("+1m"))
+      await sleep('1m')
+      schedule_next()
+			//Tone.Transport.scheduleOnce(schedule_next, ("+1m"))
 		} else {
-      console.log("Update2")
 			//update_transaction_display(collected_blocks[blockSeq][2][0])
 			blockSeq++
-			Tone.Transport.scheduleOnce(check_for_new_content, ("+1m"))
+      await sleep('1m')
+      check_for_new_content()
+			//Tone.Transport.scheduleOnce(check_for_new_content, ("+1m"))
 		}
 	} else {
-    console.log("Update3")
-		Tone.Transport.scheduleOnce(check_for_new_content, ("+1m"))
+    await sleep('1m')
+    check_for_new_content()
+		//Tone.Transport.scheduleOnce(check_for_new_content, ("+1m"))
 	}
   if (should_reset) {
     collected_blocks = []
