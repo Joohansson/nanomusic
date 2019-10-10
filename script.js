@@ -22,6 +22,7 @@ var prior_block_id
 var beat_lengths = ["1n", "1n", "2n", "4n", "2n", "4n", "4n", "8n"]
 var collected_blocks = []
 var current_colors = []
+var current_colors_send = []
 var last_block_played
 var mute = false
 var clock = new THREE.Clock()
@@ -50,17 +51,20 @@ var muted = false
 var mute_state = false //initial mute state from cookie
 var volumeval = 50 //current inverted volume
 
-var chords = [["B1", "F#1", "F#2", "B2", "F#3", "B3", "D3", "A3", "D4", "E4", "A4", "D5"],
+var chords = [
+["B1", "F#1", "F#2", "B2", "F#3", "B3", "D3", "A3", "D4", "E4", "A4"],
 ["B2", "F#2", "B3", "F#3", "D2", "E2", "A2", "D3", "E3", "A3", "D4"],
 ["D2", "F#2", "D3", "F#3", "D2", "E2","F#2", "A2", "E3", "A3", "E4" ],
-["F#2", "C#2", "F#3", "C#3", "E3", "F#3", "A3", "B3", "C#3", "E4", "A4", "B4", "E5"],
+["F#2", "C#2", "F#3", "C#3", "E3", "F#3", "A3", "B3", "C#3", "E4", "A4"],
 ["D1", "A2", "D2", "A3", "E3", "F#3", "G#3", "A3", "B3", "E4", "B4"],
-["A2", "E2", "A3", "E3", "F#3", "G#3", "B3", "C#4", "E4", "B4"],
-["C#2", "F#2", "C#3", "F#3", "G#3", "A3", "C#4", "A4", "C#5"],
-["F#1", "C#2", "F#2", "C#3", "F#3", "G#3", "A3", "B3", "C#4", "F#4"],
-["E1", "A1", "E2", "A2", "C#3", "F#3", "G#3", "A3", "B3", "E4", "G#4", "B4", "E5"],
-["D1", "A1", "D2", "A2", "F#3", "G#3", "A3", "E4", "A4", "E5"]]
+["A2", "E2", "A3", "E3", "F#3", "G#3", "B3", "C#4", "E4", "B4", "E5"],
+["C#2", "F#2", "C#3", "F#3", "G#3", "A3", "C#4", "A4", "C#5", "F#5", "G#5"],
+["F#1", "C#2", "F#2", "C#3", "F#3", "G#3", "A3", "B3", "C#4", "F#4", "G#4"],
+["E1", "A1", "E2", "A2", "C#3", "F#3", "G#3", "A3", "B3", "E4", "G#4"],
+["D1", "A1", "D2", "A2", "F#3", "G#3", "A3", "E4", "A4", "E5", "F#5"]]
+
 var current_notes = chords[0]
+var current_notes_send = chords[1]
 //cyan, green, lime, amber, deep orange, red, pink, purple, indigo, light blue
 var color_schemes =
 [
@@ -75,6 +79,7 @@ var color_schemes =
 [0x1a237e, 0xe8eaf6, 0xc5cae9, 0x9fa8da, 0x7986cb, 0x5c6bc0, 0x3d5afe, 0x3f51b5, 0x303f9f],
 [0x01579b, 0xe1f5fe, 0xb3e5fc, 0x81d4fa, 0x4fc3f7, 0x29b6f6, 0x00b0ff, 0x03a9f4, 0x0288d1]
 ]
+
 var tick = 0,
     smallest_dimension = Math.min( window.innerWidth, window.innerHeight ),
     viewport_width = smallest_dimension,
@@ -198,6 +203,13 @@ function update_current_notes(xx) {
 	//console.log("Chord: " + xx)
 	current_notes = chords[xx]
 	current_colors = color_schemes[xx]
+
+  xx_send = xx + 1
+  if (xx_send > current_colors.length) {
+    xx_send = 0
+  }
+  current_colors_send = color_schemes[xx_send]
+  current_notes_send = chords[xx_send]
 }
 
 //send dummy tones to initialize the graphics
@@ -394,19 +406,9 @@ function init() {
     dummy_notes()
 }
 
-function trigger_light(x, hasPitch, scale) {
-    if (!collected_blocks[blockSeq]) {
-      return
-    }
-    var block_info = collected_blocks[blockSeq][2][x]
-    if (!block_info) {
-      return
-    }
-    //update_transaction_display(block_info)
-
+function trigger_light(x, amount, hasPitch, scale, type) {
     var ran_cube = cubes.children[ (cubes.children.length - 1) -  x]
-    var justCol = block_info[1]
-    var new_col = interpret_cube_color(justCol)
+    var new_col = interpret_cube_color(amount,type)
     ran_cube.material.color.setHex( new_col)
     if (hasPitch){
         ran_cube.material.opacity= 1
@@ -441,13 +443,13 @@ function interpret_amount_beat(val) {
 	} else if ((val >= 1) && (val < 10)) {
 		return "4n"
 	} else if ((val >= 10) && (val < 100)) {
-		return "2n"
+		return "3n"
 	} else if ((val >= 100) && (val < 1000)) {
-		return "1n"
+		return "2n"
 	} else if ((val >= 1000) && (val < 10000)) {
-		return "1m"
+		return "1n"
 	} else {
-		return "2m"
+		return "1m"
 	}
 }
 
@@ -462,61 +464,113 @@ function interpret_amount_vel(val) {
 		return .65
 	} else if ((val >= 10) && (val < 100)) {
 		return .8
-	}else if ((val >= 100)) {
+	}else {
 		return .9
 	}
 }
 
-function interpret_hash(hash) {
+function interpret_hash(hash, type) {
     notes = ["A3", "Bb3", "C4", "D4", "Eb4", "F4", "G4", "Ab4", "Bb4", "C5", "Eb5", "G5"]
+    notes_send = ["A2", "Bb2", "C3", "D3", "Eb3", "F3", "G3", "Ab3", "Bb3", "C4", "Eb4", "G4"]
     num_hash = hash.replace(/\D/g,'')
     num = mode(add(num_hash))
-    //num = Math.floor(Math.random() * notes.length)
-    return notes[num]
+    //if (type == 'send') {
+      //return notes_send[num]
+    //}
+    return notes_send[num]
 }
 
-function interpret_amount_note(val){
-  if (val < .001) {
-		return current_notes[current_notes.length - 1]
-	} else if ((val >= .001) && (val < 0.01)) {
-		return current_notes[current_notes.length - 2]
-	} else if ((val >= 0.01) && (val < 0.1)) {
-		return current_notes[current_notes.length - 3]
-	} else if ((val >= 0.1) && (val < 1)) {
-		return current_notes[current_notes.length - 4]
-	} else if ((val >= 1) && (val < 10)) {
-		return current_notes[current_notes.length - 5]
-	} else if ((val >= 10) && (val < 100)) {
-		return current_notes[current_notes.length - 6]
-	}else if ((val >= 100) && (val < 1000)) {
-		return current_notes[current_notes.length - 7]
-	}else if ((val >= 1000) && (val < 5000)) {
-		return current_notes[current_notes.length - 8]
-	}else if ((val >= 5000)) {
-		return current_notes[current_notes.length - 9]
-	}
+function interpret_amount_note(val, type){
+  let length = current_notes.length
+  if (type == 'send') {
+    if (val < .001) {
+  		return current_notes_send[length - 1]
+  	} else if ((val >= .001) && (val < 0.01)) {
+  		return current_notes_send[length - 2]
+  	} else if ((val >= 0.01) && (val < 0.1)) {
+  		return current_notes_send[length - 3]
+  	} else if ((val >= 0.1) && (val < 1)) {
+  		return current_notes_send[length - 4]
+  	} else if ((val >= 1) && (val < 10)) {
+  		return current_notes_send[length - 5]
+  	} else if ((val >= 10) && (val < 100)) {
+  		return current_notes_send[length - 6]
+  	}else if ((val >= 100) && (val < 1000)) {
+  		return current_notes_send[length - 7]
+  	}else if ((val >= 1000) && (val < 5000)) {
+  		return current_notes_send[length - 8]
+    }else if ((val >= 5000) && (val < 10000)) {
+    	return current_notes_send[length - 9]
+  	}else {
+  		return current_notes_send[length - 10]
+  	}
+  }
+  else {
+    if (val < .001) {
+  		return current_notes[length - 1]
+  	} else if ((val >= .001) && (val < 0.01)) {
+  		return current_notes[length - 2]
+  	} else if ((val >= 0.01) && (val < 0.1)) {
+  		return current_notes[length - 3]
+  	} else if ((val >= 0.1) && (val < 1)) {
+  		return current_notes[length - 4]
+  	} else if ((val >= 1) && (val < 10)) {
+  		return current_notes[length - 5]
+  	} else if ((val >= 10) && (val < 100)) {
+  		return current_notes[length - 6]
+  	}else if ((val >= 100) && (val < 1000)) {
+  		return current_notes[length - 7]
+  	}else if ((val >= 1000) && (val < 5000)) {
+  		return current_notes[length - 8]
+    }else if ((val >= 5000) && (val < 10000)) {
+    	return current_notes[length - 9]
+  	}else {
+  		return current_notes[length - 10]
+  	}
+  }
 }
 
-function interpret_cube_color(val){
-	if (val < .001) {
-		return current_colors[8]
-	} else if ((val >= .001) && (val < 0.01)) {
-		return current_colors[7]
-	} else if ((val >= 0.01) && (val < 0.1)) {
-		return current_colors[6]
-	} else if ((val >= 0.1) && (val < 1)) {
-		return current_colors[5]
-	} else if ((val >= 1) && (val < 10)) {
-		return current_colors[4]
-	} else if ((val >= 10) && (val < 100)) {
-		return current_colors[3]
-	}else if ((val >= 100) && (val < 1000)) {
-		return current_colors[2]
-	}else if ((val >= 1000) && (val < 5000)) {
-		return current_colors[1]
-	}else if ((val >= 5000)) {
-		return current_colors[0]
-	}
+function interpret_cube_color(val,type){
+  console.log(type)
+  if (type=='send') {
+    if (val < .001) {
+  		return current_colors_send[8]
+  	} else if ((val >= .001) && (val < 0.01)) {
+  		return current_colors_send[7]
+  	} else if ((val >= 0.01) && (val < 0.1)) {
+  		return current_colors_send[6]
+  	} else if ((val >= 0.1) && (val < 1)) {
+  		return current_colors_send[5]
+  	} else if ((val >= 1) && (val < 10)) {
+  		return current_colors_send[4]
+  	} else if ((val >= 10) && (val < 100)) {
+  		return current_colors_send[3]
+  	}else if ((val >= 100) && (val < 1000)) {
+  		return current_colors_send[2]
+  	}else {
+  		return current_colors_send[1]
+  	}
+  }
+
+  else {
+  	if (val < .001) {
+  		return current_colors[8]
+  	} else if ((val >= .001) && (val < 0.01)) {
+  		return current_colors[7]
+  	} else if ((val >= 0.01) && (val < 0.1)) {
+  		return current_colors[6]
+  	} else if ((val >= 0.1) && (val < 1)) {
+  		return current_colors[5]
+  	} else if ((val >= 1) && (val < 10)) {
+  		return current_colors[4]
+  	} else if ((val >= 10) && (val < 100)) {
+  		return current_colors[3]
+  	}else if ((val >= 100) && (val < 1000)) {
+  		return current_colors[2]
+  	}else {
+  		return current_colors[1]
+  	}
+  }
 }
 
 function interpret_amount_scale(val){
@@ -528,7 +582,7 @@ function interpret_amount_scale(val){
 		return 9
 	} else if ((val >= 10) && (val < 1000)) {
 		return 12
-	} else if ((val >= 1000)) {
+	} else {
 		return 22
 	}
 }
@@ -574,15 +628,18 @@ function define_content() {
 		    //one_info.push(this_tx.block_id)
 		    one_info.push("0")
         one_info.push(0)
+        one_info.push('')
         transaction_info.push(one_info)
     } else {
     	for (var xx = 0; xx < transactions.length; xx++ ) {
 	        var one_info = []
 	        this_tx = transactions[xx]
 
- 	        var amount =  this_tx.amount
+          let amount = this_tx.amount
+          let type = this_tx.subtype
 	        one_info.push(this_tx.hash)
 	        one_info.push(amount.toFixed(4))
+          one_info.push(type)
 	        transaction_info.push(one_info)
 	        if (this_tx.amount == 0) {
 	            new_melody.push('C7')
@@ -592,10 +649,10 @@ function define_content() {
 	        } else {
 	            new_beats.push(interpret_amount_beat(amount))
               if (interpretation == 0) {
-                new_melody.push(interpret_hash(this_tx.hash))
+                new_melody.push(interpret_hash(this_tx.hash, type))
               }
               else if (interpretation == 1){
-                new_melody.push(interpret_amount_note(amount))
+                new_melody.push(interpret_amount_note(amount, type))
               }
 	            new_velocity.push(interpret_amount_vel(amount))
 	            new_scale.push(interpret_amount_scale(amount))
@@ -803,24 +860,25 @@ function schedule_next(){
   	var v = collected_blocks[blockSeq][3][xCount]
   	var s = collected_blocks[blockSeq][4][xCount]
   	if (n !== "C7") {
-  		//console.log(n, b, v, s)
-  		play_note(n,b,v, s, xCount)
+  		console.log(n, b, v, s, xCount)
+      let hash = collected_blocks[blockSeq][2][xCount][0]
+      let amount = collected_blocks[blockSeq][2][xCount][1]
+      let type = collected_blocks[blockSeq][2][xCount][2]
+  		play_note(n,b,v, s, xCount, amount, type)
 
       // update stats
-      var hash = collected_blocks[blockSeq][2][xCount][0]
-      var amount = collected_blocks[blockSeq][2][xCount][1]
-      document.getElementById("currentHash").innerHTML = '<a target="_blank" href="' + block_explorer  + hash + '">' + hash + '</a> | ' + amount + ' ► Note: ' + n + " - " + b
+      document.getElementById("currentHash").innerHTML = '<a target="_blank" href="' + block_explorer  + hash + '">' + hash + '</a> | ' + amount + ' | ' + type + ' ► Note: ' + n + " - " + b
   	} else {
-  		trigger_light(xCount, false, 1)
+  		trigger_light(xCount, 0, false, 1, '')
   	}
 
   	if (xCount  < collected_blocks[blockSeq][0].length-1) {
   		//schedule the next event relative to the current time by prefixing "+"
-      //console.log("Schedule next")
+      console.log("Schedule next")
   		Tone.Transport.scheduleOnce(schedule_next, ("+" + b))
   		xCount++
   	} else {
-      //console.log("Update")
+      console.log("Update")
       playing = false
   		blockSeq++
       //console.log("Sequence:" + blockSeq + " / " + (collected_blocks.length))
@@ -853,17 +911,20 @@ function schedule_next(){
 function check_for_new_content() {
 	if (collected_blocks[blockSeq] !== undefined) {
 		if (collected_blocks[blockSeq][0].length > 0) {
+      console.log("Update1")
 			update_current_notes(Math.floor(Math.random() * chords.length))
 			xCount = 0
       create_grid(collected_blocks[blockSeq])
       document.getElementById("currentSequence").innerHTML = " Melody Sequence: " + (blockSeq+1) + " / " + (collected_blocks.length)
 			Tone.Transport.scheduleOnce(schedule_next, ("+1m"))
 		} else {
+      console.log("Update2")
 			//update_transaction_display(collected_blocks[blockSeq][2][0])
 			blockSeq++
 			Tone.Transport.scheduleOnce(check_for_new_content, ("+1m"))
 		}
 	} else {
+    console.log("Update3")
 		Tone.Transport.scheduleOnce(check_for_new_content, ("+1m"))
 	}
   if (should_reset) {
@@ -875,10 +936,10 @@ function check_for_new_content() {
 }
 
 //const now = Tone.now()
-function play_note(n, b, v, s, x) {
+function play_note(n, b, v, s, x, a, t) {
 	var note = new Tone.Event(function(b, n){
 		synth.triggerAttackRelease(n, "4n", b, .5)
-		trigger_light(x, true,s)
+		trigger_light(x, a, true, s, t)
 	}, n).start(Tone.now())
 }
 
