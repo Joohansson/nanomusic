@@ -852,7 +852,6 @@ function on_window_resize() {
     camera.updateProjectionMatrix()
 
     renderer.setSize( window.innerWidth, window.innerHeight )
-
 }
 
 //setInterval(update_data(), delay)
@@ -981,6 +980,7 @@ const mainSocketOpenListener = (event) => {
 const mainSocketCloseListener = (event) => {
   if (socket_nano_main) {
     console.error('Main socket disconnected.')
+    ga('send', 'event', 'websocket-disconnect', 'main', 'main')
   }
   socket_nano_main = new WebSocket(url_nano_main)
   socket_nano_main.addEventListener('open', mainSocketOpenListener)
@@ -1005,6 +1005,7 @@ const betaSocketOpenListener = (event) => {
 const betaSocketCloseListener = (event) => {
   if (socket_nano_beta) {
     console.error('Beta socket disconnected.')
+    ga('send', 'event', 'websocket-disconnect', 'main', 'main')
   }
   socket_nano_beta = new WebSocket(url_nano_beta)
   socket_nano_beta.addEventListener('open', betaSocketOpenListener)
