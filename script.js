@@ -706,7 +706,7 @@ function create_grid(content) {
 $(document).ready(function(){
   //Switches
   $('#net-switch').change(function() {
-    ga('send', 'event', 'buttton', 'click', 'net-switch')
+    ga('send', 'event', 'buttton', 'click-net-switch', 'net-switch')
      if($(this).is(":checked")) {
        netSelected = 1
        block_explorer = block_explorer_beta
@@ -718,7 +718,7 @@ $(document).ready(function(){
   })
 
   $('#note-switch').change(function() {
-    ga('send', 'event', 'buttton', 'click', 'note-switch')
+    ga('send', 'event', 'buttton', 'click-note-switch', 'note-switch')
     if($(this).is(":checked")) {
       interpretation = 1
     }
@@ -767,7 +767,7 @@ $(document).ready(function(){
       l.classList.toggle("hidden"),
       !1
 
-      ga('send', 'event', 'buttton', 'click', 'info')
+      ga('send', 'event', 'buttton', 'click-info', 'info')
   }),
   document.getElementById("close-button").addEventListener("click", function(e) {
       var l = document.getElementById("info")
@@ -782,7 +782,7 @@ $(document).ready(function(){
   var $start = document.querySelector('#play_button')
 	$(".play_button").show()
 	$(".play_button").click(function(){
-    ga('send', 'event', 'buttton', 'click', 'play')
+    ga('send', 'event', 'buttton', 'click-play', 'play')
     Tone.start()
 		StartAudioContext(Tone.context, $start, () => {
 			$start.remove()
@@ -805,7 +805,7 @@ $(document).ready(function(){
 
   // mute button
   document.getElementById("speaker").addEventListener("click", function(e) {
-    ga('send', 'event', 'buttton', 'click', 'mute')
+    ga('send', 'event', 'buttton', 'click-mute', 'mute')
     this.classList.toggle('is-muted')
     mute_sound()
     Cookies.set("muted", muted, {
