@@ -50,7 +50,8 @@ var customPass = null
 var muted = false
 var mute_state = false //initial mute state from cookie
 var volumeval = 50 //current inverted volume
-const base_measure = 2500 //length in ms of one measure (1m) when not using Tone.js transport
+const base_measure_init = 2500 //length in ms of one measure (1m) when not using Tone.js transport
+var base_measure = base_measure_init
 
 var chords = [
 ["B1", "F#1", "F#2", "B2", "F#3", "B3", "D3", "A3", "D4", "E4", "A4"],
@@ -761,21 +762,23 @@ $(document).ready(function(){
 
   document.getElementById("info-button").addEventListener("click", function(e) {
       var l = document.getElementById("info")
-      return e.preventDefault(),
-      l.classList.toggle("hidden"),
-      l = document.getElementById("play_button"),
-      l.classList.toggle("hidden"),
-      !1
+      l.classList.toggle("hidden")
+      l = document.getElementById("play_button")
+      if (l) {
+        l.classList.toggle("hidden")
+      }
+      return e.preventDefault()
 
       ga('send', 'event', 'buttton', 'click-info', 'info')
   }),
   document.getElementById("close-button").addEventListener("click", function(e) {
-      var l = document.getElementById("info")
-      return e.preventDefault(),
-      l.classList.toggle("hidden"),
-      l = document.getElementById("play_button"),
-      l.classList.toggle("hidden"),
-      !1
+    var l = document.getElementById("info")
+    l.classList.toggle("hidden")
+    l = document.getElementById("play_button")
+    if (l) {
+      l.classList.toggle("hidden")
+    }
+    return e.preventDefault()
   })
 
 	//init()
@@ -877,7 +880,7 @@ async function schedule_next(){
 		play_note(n,b,v, s, xCount, amount, type)
 
     // update stats
-    document.getElementById("currentHash").innerHTML = '<a target="_blank" href="' + block_explorer  + hash + '">' + hash + '</a> | ' + amount + ' | ' + type + ' ► Note: ' + n + " - " + b
+    document.getElementById("current-hash").innerHTML = '<a target="_blank" href="' + block_explorer  + hash + '">' + hash + '</a> | ' + amount + ' | ' + type + ' ► Note: ' + n + " - " + b
 
   	if (xCount  < collected_blocks[blockSeq][0].length-1) {
       xCount++
@@ -922,8 +925,17 @@ async function check_for_new_content() {
 			update_current_notes(Math.floor(Math.random() * chords.length))
 			xCount = 0
       create_grid(collected_blocks[blockSeq])
-      document.getElementById("currentQueue").innerHTML = "Blocks Queued: " + (transactions.length-transactions_last) + " "
-      document.getElementById("currentSequence").innerHTML = " Melody Sequence: " + (blockSeq+1) + " / " + (collected_blocks.length)
+      document.getElementById("current-queue").innerHTML = "Blocks Queued: " + (transactions.length-transactions_last) + " "
+      document.getElementById("current-sequence").innerHTML = " Melody Sequence: " + (blockSeq+1) + " / " + (collected_blocks.length)
+
+      //increase base melody speed if lagging behind on blocks
+      var multiplier = (collected_blocks.length - (blockSeq+1)) * 0.2
+      if (multiplier < 1) {
+        multiplier = 1
+      }
+      base_measure = base_measure_init * (1/multiplier)
+      console.log("Base: " + base_measure)
+
       await sleep('1m')
       schedule_next()
 			//Tone.Transport.scheduleOnce(schedule_next, ("+1m"))
@@ -1029,7 +1041,7 @@ function processSocket(data) {
 
   //randomize the amount on screen
   text_generator(txData.amount, txData.hash, txData.subtype)
-  document.getElementById("currentQueue").innerHTML = "Blocks Queued: " + (transactions.length-transactions_last) + " "
+  document.getElementById("current-queue").innerHTML = "Blocks Queued: " + (transactions.length-transactions_last) + " "
 }
 
 var mode = function mode(arr) {

@@ -124,6 +124,7 @@ canvas {
   background-image: url("play_button.png");
   cursor: pointer;
   opacity: 0.8;
+  background-size: contain;
 }
 
 .play_button p {
@@ -134,6 +135,7 @@ canvas {
 }
 
 .explain {
+  font-size: 11px;
   line-height: 18px;
 }
 
@@ -215,9 +217,10 @@ a:hover{text-decoration:underline;}
   and (orientation : landscape) {
   #content h1{font-size: 2.5vw;}
   #content p{font-size: 1.35vw;}
-  #content{
-    width:68vw;
-    margin:auto;
+  #content span{font-size: 1vw;}
+  #content-background {
+    width: 800px;
+    margin: auto;
   }
 }
 
@@ -226,31 +229,39 @@ a:hover{text-decoration:underline;}
   and (min-width : 1200px){
   #content h1{font-size: 2.4em;}
   #content p{font-size: 1.5em;}
-  #content{
-    width:816px;
-    margin:auto;
-  }
+  #content span{font-size: 1em;}
 }
 
 @media screen
   and (orientation : landscape)
   and (max-height : 600px){
   #content h1{font-size: 4.4vh;}
+  #content h2{font-size: 2.7vh;}
   #content p{font-size: 2.7vh;}
-  #content{
-    width:136vh;
-    margin:auto;
+  #content span{font-size: 1em;}
+  #content-background {
+    width: 80%;
+    margin: auto;
   }
-}
 
-@media screen
-  and (orientation : landscape)
-  and (max-height : 600px){
-  #content h1{font-size: 4.4vh;}
-  #content p{font-size: 2.7vh;}
-  #content{
-    width:136vh;
-    margin:auto;
+  #play_button {
+    width: 128px;
+    height: 128px;
+    margin: -64px 0 0 -64px;
+  }
+
+  .switch-container span {
+    font-size: 14px;
+    line-height: 14px;
+  }
+
+  .info-line {
+    font-size: 10px !important;
+  }
+
+  .explain {
+    font-size: 8px !important;
+    line-height: 10px !important;
   }
 }
 
@@ -266,6 +277,20 @@ a:hover{text-decoration:underline;}
 and (max-width : 640px){
   #info{
     padding:4vh;
+  }
+  .address {
+    font-size: 8px;
+  }
+  .explain {
+    font-size: 8px !important;
+    line-height: 12px !important;
+  }
+  .switch-container span {
+    font-size: 10px;
+    line-height: 10px;
+  }
+  .info-line {
+    font-size: 10px !important;
   }
 }
 
@@ -347,8 +372,8 @@ input:checked + .slider:before {
 .volume-chooser {
   padding: 0px;
   position: absolute;
-  top: 22px;
-  right: 150px;
+  top: 66px;
+  right: 88px;
   opacity: 0.3;
 }
 

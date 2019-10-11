@@ -77,16 +77,16 @@
 				<div id="content-background">
 	        <h1>Musical interpretation of the Nano network</h1>
 	        <br />
-	        <strong class="address">Donation: nano_1gur37mt5cawjg5844bmpg8upo4hbgnbbuwcerdobqoeny4ewoqshowfakfo</strong></a></p><br />
+	        <span class="address"><strong>Donation: nano_1gur37mt5cawjg5844bmpg8upo4hbgnbbuwcerdobqoeny4ewoqshowfakfo</strong></span><br/><br/>
 	        <div id="address-img"></div>
 	        <br/>
 	        <p class="address"><a href="https://github.com/Joohansson/nanomusic">NanoMusic Github</a> | <a href="https://github.com/JZito/blockchain_visualizer">An Ether Dream Fork</a></p>
 	        <br>
 	        <h2>How does it work?</h2>
 	        <span class="explain">Transactions/blocks are recorded live from the Nano currency network. Amounts are presented as floating text (>x = receive, x> = send).</br>
-	          In each interval of 20 seconds a melody of max 64 notes is created by interpreting the block hash, type and amount.</br>
-	          For every new block recorded, the melody is extended and old notes are discarded.</br>
-	          If blocks arriving faster than the melody can be created, they are ignored.</br></br>
+	          During each melody a new melody of max 64 notes is created by interpreting incoming block hash, type and amount.<br/>
+	          For every new block recorded, the melody is extended and old notes are discarded.<br/>
+	          If blocks arriving faster than 64 per 8sec interval, they are ignored.<br/><br/>
 						<a href="https://nano.org">More info about Nano</a>
 	        </span>
 	        <p><a href="#" id="close-button">CLOSE</a></p>
@@ -113,9 +113,9 @@
       </div>
     </div>
     <div class="info-container">
-      <p><a href="index.html#" id="info-button">ABOUT</a></p>
-      <p id = "currentHash"></p>
-      <p><span id = "currentQueue">BLOCKS QUEUED: 0 </span>|<span id = "currentSequence"> MELODY SEQUENCE: 0 / 0</span></p>
+      <h3><a href="index.html#" id="info-button">ABOUT</a></h3>
+      <p class="info-line" id = "current-hash"></p>
+      <p class="info-line"><span id = "current-queue">BLOCKS QUEUED: 0 </span>|<span id = "current-sequence"> MELODY SEQUENCE: 0 / 0</span></p>
     </div>
 
     <div id="play_button" class="play_button">
