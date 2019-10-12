@@ -46,7 +46,7 @@ var noise_counter = 0.0
 var customPass = null
 var muted = false
 var mute_state = false //initial mute state from cookie
-var volumeval = 50 //current inverted volume
+var volumeval = 40 //current inverted volume
 const base_measure_init = 2500 //length in ms of one measure (1m) when not using Tone.js transport
 var base_measure = base_measure_init
 
@@ -129,8 +129,8 @@ function start_tone_stuff(){
 	//wider = new Tone.StereoWidener(1).connect(reverb) //this is making a heavy click sound when initialized
 	feedbackDelay2 = new Tone.PingPongDelay("3n", .5).connect(reverb)
 
-	eq = new Tone.EQ3(5, -5, -15).connect(feedbackDelay2)
-  eq_synth = new Tone.EQ3(-2, 1, -4).connect(feedbackDelay)
+	eq = new Tone.EQ3(2, -5, -15).connect(feedbackDelay2)
+  eq_synth = new Tone.EQ3(-5, -2, -4, 600, 2500).connect(feedbackDelay)
 
 	synth = new Tone.FMSynth().connect(eq_synth)
 	synth.set({
@@ -155,7 +155,7 @@ function start_tone_stuff(){
 			sustain:1,
 			release:0.5
 	}})
-	synth.volume.value = -8
+	synth.volume.value = -5
 	feedbackDelay.wet.value = .5
 
 	polySynth = new Tone.PolySynth(4, Tone.MonoSynth).connect(eq)
@@ -168,7 +168,7 @@ function start_tone_stuff(){
 	        "releaseCurve" : "exponential"
 	    }
 	})
-	polySynth.volume.value = -60
+	polySynth.volume.value = -63
 
 	var loop2 = new Tone.Loop(function(time){
 	    polySynth.triggerAttackRelease(current_notes[Math.floor(Math.random() * (current_notes.length - 4))], "2m")
@@ -189,7 +189,7 @@ function start_tone_stuff(){
 	//}, ["D1"], "2n").start(0)
 
 	noise = new Tone.Noise("white").start()
-	noise.volume.value = -40
+	noise.volume.value = -43
 	//make an autofilter to shape the noise
 	autoFilter = new Tone.AutoFilter({
 		"frequency" : "10m",
@@ -799,7 +799,7 @@ $(document).ready(function(){
     })
     if(!muted) {
       var volume = Tone.Master;
-        volume.set("volume", -(50-volumeval));
+        volume.set("volume", -(40-volumeval));
     }
   })
 

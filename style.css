@@ -260,8 +260,8 @@ a:hover{text-decoration:underline;}
   }
 
   .explain {
-    font-size: 8px !important;
-    line-height: 10px !important;
+    font-size: 1.8vh !important;
+    line-height: 2.0vh !important;
   }
 }
 
@@ -275,6 +275,11 @@ a:hover{text-decoration:underline;}
 
 @media screen and (orientation : portrait)
 and (max-width : 640px){
+  #content-background {
+    width: 80%;
+    margin: auto;
+  }
+
   #info{
     padding:4vh;
   }
@@ -372,7 +377,7 @@ input:checked + .slider:before {
 .volume-chooser {
   padding: 0px;
   position: absolute;
-  top: 66px;
+  top: 60px;
   right: 88px;
   opacity: 0.3;
 }
