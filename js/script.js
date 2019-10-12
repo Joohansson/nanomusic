@@ -415,7 +415,7 @@ async function init() {
 
     //set mute state
     if (mute_state == true) {
-      mute_sound()
+      Tone.Master.mute = true
     }
     else {
       Tone.Master.mute = false
