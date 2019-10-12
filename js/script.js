@@ -1,4 +1,4 @@
-/**THE MUTE BUTTON BELOW TO POLYMER
+/**THE MUTE BUTTON BELONG TO POLYMER
  * @license
  * Copyright (c) 2017 The Polymer Project Authors. All rights reserved.
  * This code may only be used under the BSD style license found at
@@ -26,9 +26,6 @@ var current_colors_send = []
 var last_block_played
 var mute = false
 var clock = new THREE.Clock()
-var special_colors = ["0xff1744", "0xf50057", "0xd500f9", "0xff3d00"]
-var notes = ["C2", "D#2", "F2", "Ab2", "Ab3", "G3", "C4", "Bb3", "F3", "D4", "Eb4"]
-// var chords = [ ["C2", "F2", "Ab2", "C4"], ["Eb3", "G3", "Ab4", "G2"], ["F2", "Bb3", "F3", "D4"], ["G2", "Bb3", "C4", "Eb4"] ]
 const url_nano_main = "wss://ws.nanocrawler.cc"
 const url_nano_beta = "wss://beta.ws.nanocrawler.cc"
 const block_explorer_main = "https://nanocrawler.cc/explorer/block/"
@@ -362,7 +359,7 @@ async function init() {
     //custom shader pass for noise
     var vertShader = document.getElementById('vertexShader').textContent;
     var fragShader = document.getElementById('fragmentShader').textContent;
-    var myEffect = {
+    var noiseEffect = {
       uniforms: {
         "tDiffuse": { value: null },
         "amount": { value: noise_counter }
@@ -371,7 +368,7 @@ async function init() {
       fragmentShader: fragShader
     }
 
-    customPass = new THREE.ShaderPass(myEffect);
+    customPass = new THREE.ShaderPass(noiseEffect);
     customPass.renderToScreen = true;
     composer.addPass(customPass);
 
@@ -934,7 +931,7 @@ async function check_for_new_content() {
         multiplier = 1
       }
       base_measure = base_measure_init * (1/multiplier)
-      console.log("Base: " + base_measure)
+      //console.log("Base: " + base_measure)
 
       await sleep('1m')
       schedule_next()
