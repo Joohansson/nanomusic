@@ -283,8 +283,9 @@ and (max-width : 640px){
   #info{
     padding:4vh;
   }
+
   .address {
-    font-size: 8px;
+    font-size: 7px;
   }
   .explain {
     font-size: 8px !important;

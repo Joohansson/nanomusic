@@ -17,8 +17,6 @@ var geometry, material, mesh
 var started = false
 var sphere
 var prior_block_id
-// var current_melody = []
-// var unused_positions = []
 var beat_lengths = ["1n", "1n", "2n", "4n", "2n", "4n", "4n", "8n"]
 var collected_blocks = []
 var current_colors = []
@@ -43,12 +41,14 @@ var melody_interval = 8000
 var transactions_last = 0 //last processed melody length
 var playing = false //currently playing
 var noise_counter = 0.0
-var customPass = null
+var noise_pass = null
 var muted = false
 var mute_state = false //initial mute state from cookie
 var volumeval = 40 //current inverted volume
 const base_measure_init = 2500 //length in ms of one measure (1m) when not using Tone.js transport
 var base_measure = base_measure_init
+var blockSeq = 0 //current melody position
+var xCount = 0 //current note position in melody
 
 var chords = [
 ["B1", "F#1", "F#2", "B2", "F#3", "B3", "D3", "A3", "D4", "E4", "A4"],
@@ -80,28 +80,24 @@ var color_schemes =
 ]
 
 var tick = 0,
-    smallest_dimension = Math.min( window.innerWidth, window.innerHeight ),
-    viewport_width = smallest_dimension,
-    viewport_height = smallest_dimension,
+  smallest_dimension = Math.min( window.innerWidth, window.innerHeight ),
+  viewport_width = smallest_dimension,
+  viewport_height = smallest_dimension,
 
-    //world width and world height might become object or card width, card height
-    world_width = 250,
-    world_height = 250,
-    tile_width = 50,
-    tile_height = 50,
-    ran =64,
-    spotLight, ambient_light, plane,
+  //world width and world height might become object or card width, card height
+  world_width = 250,
+  world_height = 250,
+  tile_width = 50,
+  tile_height = 50,
+  ran =64,
+  spotLight, ambient_light, plane,
 
-    FOV = 200
-
-
-// mainGain.gain.exponentialRampToValueAtTime(.1, context.currentTime + 1)
-//     mainGain.gain.value = .1
+  FOV = 200
 
 function mute_sound() {
-    Tone.Master.mute = !Tone.Master.mute
-    muted = !muted
-    mute_state = muted
+  Tone.Master.mute = !Tone.Master.mute
+  muted = !muted
+  mute_state = muted
 }
 
 //sleep based on Tone.js measure of 2 seconds (because Tone.transport does not work very well with random stops)
@@ -160,36 +156,23 @@ function start_tone_stuff(){
 
 	polySynth = new Tone.PolySynth(4, Tone.MonoSynth).connect(eq)
 	polySynth.set({
-	    "oscillator" : "PWM",
-	    "envelope" : {
-	        "attack" : 5,
-	        "release" : .5,
-	        "attackCurve" : "sine",
-	        "releaseCurve" : "exponential"
-	    }
+    "oscillator" : "PWM",
+    "envelope" : {
+        "attack" : 5,
+        "release" : .5,
+        "attackCurve" : "sine",
+        "releaseCurve" : "exponential"
+    }
 	})
 	polySynth.volume.value = -63
 
 	var loop2 = new Tone.Loop(function(time){
 	    polySynth.triggerAttackRelease(current_notes[Math.floor(Math.random() * (current_notes.length - 4))], "2m")
 	}, beat_lengths[Math.floor(Math.random() * beat_lengths.length)]).start()
-  /*
-	conga = new Tone.MembraneSynth({
-	    "pitchDecay" : 0.004,
-	    "octaves" : 2,
-	    "envelope" : {
-	        "attack" : 0.0005,
-	        "decay" : 0.4,
-	        "sustain" : 0
-	    }
-	}).connect(feedbackDelay)*/
-	//conga.volume.value = -100
-	//congaPart = new Tone.Sequence(function(time, pitch){
-	//   conga.triggerAttack(pitch, time, Math.random()*0.5 + 0.5)
-	//}, ["D1"], "2n").start(0)
 
 	noise = new Tone.Noise("white").start()
 	noise.volume.value = -43
+
 	//make an autofilter to shape the noise
 	autoFilter = new Tone.AutoFilter({
 		"frequency" : "10m",
@@ -205,9 +188,7 @@ function start_tone_stuff(){
 	Tone.Transport.start("+0.01")
 }
 
-
 function update_current_notes(xx) {
-	//console.log("Chord: " + xx)
 	current_notes = chords[xx]
 	current_colors = color_schemes[xx]
 
@@ -244,208 +225,195 @@ function dummy_notes() {
   //transactions = [] //if not using this, the new blocks will append to the dummy melody
 }
 
+/*
+  place text randomly on the screen with the transaction amount
+  larger amount => larger font and slower fadeout
+  increased fadeout speed if many objects to avoid overloading the browser
+*/
 function text_generator(amount, hash, type) {
-    if (!has_init) {
-      return
-    }
-    var fullWidth = window.innerWidth-100
-    var fullHeight = window.innerHeight-200
+  if (!has_init) {
+    return
+  }
+  var fullWidth = window.innerWidth-100
+  var fullHeight = window.innerHeight-200
 
-    var elem = document.createElement("div")
+  var elem = document.createElement("div")
 
-    var size = Math.round(amount/10 + 10)
-    if (size < 10) {
-        size = 10
-    }
-    if (size > 60) {
-        size = 60
-    }
+  var size = Math.round(amount/10 + 10)
+  if (size < 10) {
+      size = 10
+  }
+  if (size > 50) {
+      size = 50
+  }
 
-    //base the fading time from amount
-    var fade_delay = Math.sqrt(amount) * 10
-    if (fade_delay > 500) {
-      fade_delay = 500
-    }
+  //base the fading time from amount
+  var fade_delay = Math.sqrt(amount) * 10
+  if (fade_delay > 500) {
+    fade_delay = 500
+  }
 
-    if (type == "send") {
-        elem.innerHTML = '<a target="_blank" href="' + block_explorer + hash + '">' + amount.toFixed(4) + '►</a>'
-    }
-    else {
-        elem.innerHTML = '<a target="_blank" href="' + block_explorer + hash + '">►' + amount.toFixed(4) + '</a>'
-    }
+  if (type == "send") {
+      elem.innerHTML = '<a target="_blank" href="' + block_explorer + hash + '">' + amount.toFixed(4) + '►</a>'
+  }
+  else {
+      elem.innerHTML = '<a target="_blank" href="' + block_explorer + hash + '">►' + amount.toFixed(4) + '</a>'
+  }
 
-    left_pos = Math.round(Math.random() * (fullWidth))
-    digits = Math.floor(Math.log10(amount))+1+6 //integer digit count plus decimals
-    //avoid the text to go outside the screen (reduce the position by the length of the object)
-    if (left_pos > fullWidth - (size*digits)) {
-      left_pos = fullWidth - (size*digits)
-    }
+  left_pos = Math.round(Math.random() * (fullWidth))
+  digits = Math.floor(Math.log10(amount))+1+6 //integer digit count plus decimals
 
-    elem.style.fontSize = size + "px"
-    elem.style.position = "absolute"
-    elem.style.left = left_pos + 50 + "px"
-    elem.style.top = Math.round(Math.random() * (fullHeight)) + 150 - (size/2) + "px"
-    elem.classList.add("floating-text")
+  //avoid the text to go outside the screen (reduce the position by the length of the object)
+  if (left_pos > fullWidth - (size*digits)) {
+    left_pos = fullWidth - (size*digits)
+  }
+  if (left_pos < 0) {
+    left_pos = 0
+  }
 
-    //fadeout effect
-    var fadeEffect = setInterval(function () {
-        if (!elem.style.opacity) {
-            elem.style.opacity = 0.8
-        }
-        if (elem.style.opacity > 0.025) {
-            //increase fadeout time while the block queue grows, to mitigate the browser from overloading during high traffic
-            elem.style.opacity -= (0.025 + (transactions.length-transactions_last) / 10000)
-        } else {
-            elem.remove()
-            clearInterval(fadeEffect)
-        }
-    }, 150 + fade_delay)
-    document.body.appendChild(elem)
+  elem.style.fontSize = size + "px"
+  elem.style.position = "absolute"
+  elem.style.left = left_pos + 50 + "px"
+  elem.style.top = Math.round(Math.random() * (fullHeight)) + 150 - (size/2) + "px"
+  elem.classList.add("floating-text")
+
+  //fadeout effect
+  var fadeEffect = setInterval(function () {
+      if (!elem.style.opacity) {
+          elem.style.opacity = 0.8
+      }
+      if (elem.style.opacity > 0.025) {
+          //increase fadeout time while the block queue grows, to mitigate the browser from overloading during high traffic
+          elem.style.opacity -= (0.025 + (transactions.length-transactions_last) / 10000)
+      } else {
+          elem.remove()
+          clearInterval(fadeEffect)
+      }
+  }, 150 + fade_delay)
+  document.body.appendChild(elem)
 }
 
 async function init() {
-    has_init = true
-	  start_tone_stuff()
-    var e = document.createElement("canvas")
-    e = document.getElementById("canvas")
-    console.log("init called ")
-    e.width = 16
-    e.height = 16
-    camera = new THREE.OrthographicCamera( viewport_width, viewport_height, viewport_width, viewport_height, 1, 1000 )
-    camera.left = window.innerWidth / - 2
-    camera.right = window.innerWidth / 2
-    camera.top = window.innerHeight / 2
-    camera.bottom = window.innerHeight / - 2
+  has_init = true
+  start_tone_stuff()
+  var e = document.createElement("canvas")
+  e = document.getElementById("canvas")
+  console.log("init called ")
+  e.width = 16
+  e.height = 16
+  camera = new THREE.OrthographicCamera( viewport_width, viewport_height, viewport_width, viewport_height, 1, 1000 )
+  camera.left = window.innerWidth / - 2
+  camera.right = window.innerWidth / 2
+  camera.top = window.innerHeight / 2
+  camera.bottom = window.innerHeight / - 2
 
-    //camera.updateProjectionMatrix()
-    // camera.left = window.innerWidth / - 2
-    // camera.right = window.innerWidth / 2
-    // camera.top = window.innerHeight / 2
-    // camera.bottom = window.innerHeight / - 2
-    camera.updateProjectionMatrix()
-    scene = new THREE.Scene()
-    scene.add(camera)
-    renderer = new THREE.WebGLRenderer( {canvas: e,alpha: true, antialias:true} )
-    var t = e.getContext("2d")
-    e = document.getElementById("canvas")
+  camera.updateProjectionMatrix()
+  scene = new THREE.Scene()
+  scene.add(camera)
+  renderer = new THREE.WebGLRenderer( {canvas: e,alpha: true, antialias:true} )
+  var t = e.getContext("2d")
+  e = document.getElementById("canvas")
 
-    for (var p = document.getElementById("address-info"), b = document.getElementsByClassName("address-button"), E = 0; E < b.length; E++)
-        b[E].addEventListener("click", function(e) {
-            return e.preventDefault(),
-            p.classList.toggle("hidden"),
-            !1
-        })
-    window.addEventListener("resize", on_window_resize, !1)
+  for (var p = document.getElementById("address-info"), b = document.getElementsByClassName("address-button"), E = 0; E < b.length; E++)
+    b[E].addEventListener("click", function(e) {
+        return e.preventDefault(),
+        p.classList.toggle("hidden"),
+        !1
+    })
+  window.addEventListener("resize", on_window_resize, !1)
 
-	  renderer.setClearColor(0x000000)
-	  renderer.setPixelRatio( window.devicePixelRatio )
-    renderer.setSize(window.innerWidth, window.innerHeight)
-    renderer.autoClear = false
+  renderer.setClearColor(0x000000)
+  renderer.setPixelRatio( window.devicePixelRatio )
+  renderer.setSize(window.innerWidth, window.innerHeight)
+  renderer.autoClear = false
 
-    var renderPass = new THREE.RenderPass(scene, camera)
-    composer = new THREE.EffectComposer(renderer)
+  //render pass
+  var renderPass = new THREE.RenderPass(scene, camera)
+  composer = new THREE.EffectComposer(renderer)
+  composer.addPass(renderPass)
 
-    composer.addPass(renderPass)
+  //bloom pass
+  var bloomPass = new THREE.BloomPass(0.9,25,7,128)
+  composer.addPass(bloomPass)
+  bloomPass.clear = true
 
-    var bloomPass = new THREE.BloomPass(0.9,25,7,128)
-    composer.addPass(bloomPass)
-    bloomPass.clear = true
+  //old film pass (not currently used (0.0) because of a bug where it will look bad after a while)
+  //still need to have it or it will not render at all?
+  var effectFilm = new THREE.FilmPass(0.0, .01, 648, false)
+  //effectFilm.renderToScreen = true
+  composer.addPass(effectFilm)
 
-    //var effectFilm = new THREE.FilmPass(1, .05, 128, false)
-    var effectFilm = new THREE.FilmPass(0.0, .01, 648, false)
-    //effectFilm.renderToScreen = true
-    composer.addPass(effectFilm)
+  //custom shader pass for noise
+  var vertShader = document.getElementById('vertexShader').textContent;
+  var fragShader = document.getElementById('fragmentShader').textContent;
+  var noiseEffect = {
+    uniforms: {
+      "tDiffuse": { value: null },
+      "amount": { value: noise_counter }
+    },
+    vertexShader: vertShader,
+    fragmentShader: fragShader
+  }
 
-    //custom shader pass for noise
-    var vertShader = document.getElementById('vertexShader').textContent;
-    var fragShader = document.getElementById('fragmentShader').textContent;
-    var noiseEffect = {
-      uniforms: {
-        "tDiffuse": { value: null },
-        "amount": { value: noise_counter }
-      },
-      vertexShader: vertShader,
-      fragmentShader: fragShader
-    }
+  noise_pass = new THREE.ShaderPass(noiseEffect);
+  noise_pass.renderToScreen = true;
+  composer.addPass(noise_pass);
 
-    customPass = new THREE.ShaderPass(noiseEffect);
-    customPass.renderToScreen = true;
-    composer.addPass(customPass);
+  var mesh = new THREE.SphereGeometry(300,300,12)
+  var vat2 = new THREE.MeshBasicMaterial()
+  sphere = new THREE.Mesh(mesh, vat2)
+  sphere.material.opacity = 0
+  sphere.scale.x = 0.001
+  sphere.scale.y = 0.001
+  sphere.scale.z = 0.001
+  spotLight = new THREE.DirectionalLight( 0x0066f0 ),
+  cubes = new THREE.Object3D()
 
-    //container = document.getElementById( 'container' )
-    //container.appendChild( renderer.domElement )
+  camera.position.set( 0, 0, 90 )
+  camera.lookAt( scene.position )
 
-    var mesh = new THREE.SphereGeometry(300,300,12)
-	  var vat2 = new THREE.MeshBasicMaterial()
-	  //vat2.blending = THREE.AdditiveBlending
-	  sphere = new THREE.Mesh(mesh, vat2)
-	  sphere.material.opacity = 0
-	  sphere.scale.x = 0.001
-	  sphere.scale.y = 0.001
-	  sphere.scale.z = 0.001
-    spotLight = new THREE.DirectionalLight( 0x0066f0 ),
-    //ambient_light = new THREE.AmbientLight( 0x66f606 )
-    cubes = new THREE.Object3D()
-    // plane = new THREE.Mesh(
-    //     new THREE.PlaneBufferGeometry( world_width * 2, world_height * 2, 1 ),
-    //     new THREE.MeshBasicMaterial({
-    //         color: 0x00ffff
-    //     })
-    // )
-    // plane.rotation.z = 180
-    // plane.position.set( 0, 0, -10 )
-    // plane.castShadow = false
-    // plane.recieveShadow = false
+  scene.add(sphere)
+  scene.add( cubes )
+  scene.add( spotLight )
 
-    camera.position.set( 0, 0, 90 )
-    camera.lookAt( scene.position )
+  render()
 
-    //spotLight.position.set( 1000, 10, 400 )
-    //spotLight.intensity = .1
-    scene.add(sphere)
-    scene.add( cubes )
-    scene.add( spotLight )
-    //scene.add( ambient_light )
+  //play dummy notes to show visitor it's alive
+  dummy_notes()
+  await sleep('1m')
 
+  //set mute state
+  if (mute_state == true) {
+    Tone.Master.mute = true
+  }
+  else {
+    Tone.Master.mute = false
+  }
 
-    render()
-
-    dummy_notes()
-    await sleep('1m')
-
-    //set mute state
-    if (mute_state == true) {
-      Tone.Master.mute = true
-    }
-    else {
-      Tone.Master.mute = false
-    }
-
-    check_for_new_content()
-
-    mainSocketCloseListener()
-    betaSocketCloseListener()
+  check_for_new_content()
+  mainSocketCloseListener()
+  betaSocketCloseListener()
 }
 
 function trigger_light(x, amount, hasPitch, scale, type) {
-    var ran_cube = cubes.children[ (cubes.children.length - 1) -  x]
-    var new_col = interpret_cube_color(amount,type)
-    ran_cube.material.color.setHex( new_col)
-    if (hasPitch){
-        ran_cube.material.opacity= 1
-        tween1 = new TWEEN.Tween( ran_cube.material )
-            .to( {opacity: 0 }, 12000 )
-            .repeat( 0 )
-            .easing( create_step_function(64) )
-            .start()
-    } else {
-        ran_cube.material.opacity= .1
-        tween1 = new TWEEN.Tween( ran_cube.material )
-            .to( {opacity: 0 }, 12000 )
-            .repeat( 0 )
-            .easing(  create_step_function(12)  )
-            .start()
-    }
+  var ran_cube = cubes.children[ (cubes.children.length - 1) -  x]
+  var new_col = interpret_cube_color(amount,type)
+  ran_cube.material.color.setHex( new_col)
+  if (hasPitch){
+      ran_cube.material.opacity= 1
+      tween1 = new TWEEN.Tween( ran_cube.material )
+          .to( {opacity: 0 }, 12000 )
+          .repeat( 0 )
+          .easing( create_step_function(64) )
+          .start()
+  } else {
+      ran_cube.material.opacity= .1
+      tween1 = new TWEEN.Tween( ran_cube.material )
+          .to( {opacity: 0 }, 12000 )
+          .repeat( 0 )
+          .easing(  create_step_function(12)  )
+          .start()
+  }
 }
 
 function create_step_function(numSteps) {
@@ -491,7 +459,7 @@ function interpret_amount_vel(val) {
 }
 
 function interpret_hash(hash, type) {
-    notes = ["A3", "Bb3", "C4", "D4", "Eb4", "F4", "G4", "Ab4", "Bb4", "C5", "Eb5", "G5"]
+    //notes = ["A3", "Bb3", "C4", "D4", "Eb4", "F4", "G4", "Ab4", "Bb4", "C5", "Eb5", "G5"]
     notes_send = ["A2", "Bb2", "C3", "D3", "Eb3", "F3", "G3", "Ab3", "Bb3", "C4", "Eb4", "G4"]
     num_hash = hash.replace(/\D/g,'')
     num = mode(add(num_hash))
@@ -607,6 +575,62 @@ function interpret_amount_scale(val){
 	}
 }
 
+/*
+  Creates the background bars synced with the melody
+*/
+function create_grid(content) {
+	var framedWidth = (window.innerWidth) * .9 //frame amount
+    var transaxx = content[0].length
+    var fixedWidthOfOneUnit = framedWidth / transaxx
+    if (fixedWidthOfOneUnit > 150) {
+    	fixedWidthOfOneUnit = 150
+    }
+    var totalWidth =  fixedWidthOfOneUnit * transaxx
+    var the_floor = ((totalWidth) * .5) - (fixedWidthOfOneUnit * .5)
+
+    var geometry = new THREE.BoxGeometry(fixedWidthOfOneUnit, window.innerHeight, 50)
+
+    //clean previous cube children or it will build up and eventually freeze the browser
+    cubes.children = []
+
+    for (var x = 0; x < transaxx; x++) {
+        material = new THREE.MeshBasicMaterial({})
+        material.color.setHex (0x00ffff)
+        material.transparent = true
+        material.opacity = 0
+        var cube = new THREE.Mesh(geometry, material)
+        cube.scale.z = 1
+        cube.position.x = the_floor - (fixedWidthOfOneUnit * x)
+        cube.position.y = 0
+        cube.position.z = cube.geometry.parameters.depth / 2 * cube.scale.z
+        cubes.add(cube)
+    }
+}
+
+function render() {
+    var delta = clock.getDelta()
+    renderer.clear()
+    composer.render(delta)
+    requestAnimationFrame( render )
+
+    //noise generator
+    noise_counter += 0.01;
+    noise_pass.uniforms["amount"].value = noise_counter;
+
+    TWEEN.update()
+}
+
+function on_window_resize() {
+    camera.left = window.innerWidth / - 2
+    camera.right = window.innerWidth / 2
+    camera.top = window.innerHeight / 2
+    camera.bottom = window.innerHeight / - 2
+
+    camera.updateProjectionMatrix()
+
+    renderer.setSize( window.innerWidth, window.innerHeight )
+}
+
 // save melody in a melody buffer
 function write_to_dic(mel, beats, info, vel, scale) {
     arr = []
@@ -628,7 +652,7 @@ function define_content() {
     if (discarded < 0) {
       discarded = 0
     }
-    //console.log("Discarded tx: " + discarded)
+
     var new_melody = []
     var new_beats = []
     var new_velocity = []
@@ -664,199 +688,10 @@ function define_content() {
         new_velocity.push(interpret_amount_vel(amount))
         new_scale.push(interpret_amount_scale(amount))
   	}
-    // play the melody
-    //console.log(new_melody)
+    // save to be played after current melody
     write_to_dic(new_melody, new_beats, transaction_info, new_velocity, new_scale)
 }
 
-function create_grid(content) {
-	var framedWidth = (window.innerWidth) * .9 //frame amount
-    var transaxx = content[0].length
-    var fixedWidthOfOneUnit = framedWidth / transaxx
-    if (fixedWidthOfOneUnit > 150) {
-    	fixedWidthOfOneUnit = 150
-    }
-    var totalWidth =  fixedWidthOfOneUnit * transaxx
-    //var offset = (framedWidth - totalWidth) / transaxx
-    var the_floor = ((totalWidth) * .5) - (fixedWidthOfOneUnit * .5)
-
-    var geometry = new THREE.BoxGeometry(fixedWidthOfOneUnit, window.innerHeight, 50)
-
-    //clean previous cube children or it will build up and eventually freeze the browser
-    cubes.children = []
-
-    for (var x = 0; x < transaxx; x++) {
-        material = new THREE.MeshBasicMaterial({
-                    })
-        material.color.setHex (0x00ffff)
-        material.transparent = true
-        material.opacity = 0
-        var cube = new THREE.Mesh(geometry, material)
-        //cube.scale.y = world_height
-        cube.scale.z = 1
-        cube.position.x = the_floor - (fixedWidthOfOneUnit * x)
-        cube.position.y = 0
-        cube.position.z = cube.geometry.parameters.depth / 2 * cube.scale.z
-        cubes.add(cube)
-    }
-}
-
-$(document).ready(function(){
-  //Switches
-  $('#net-switch').change(function() {
-    ga('send', 'event', 'buttton', 'click-net-switch', 'net-switch')
-     if($(this).is(":checked")) {
-       netSelected = 1
-       block_explorer = block_explorer_beta
-     }
-     else {
-       netSelected = 0
-       block_explorer = block_explorer_main
-     }
-  })
-
-  $('#note-switch').change(function() {
-    ga('send', 'event', 'buttton', 'click-note-switch', 'note-switch')
-    if($(this).is(":checked")) {
-      interpretation = 1
-    }
-    else {
-      interpretation = 0
-    }
-  });
-
-  //Handle automatic cookies for all checkboxes. Using js.cookie.js plugin
-  $('input[type=checkbox]').each(function() {
-    var mycookie = Cookies.get($(this).attr('name'))
-
-    if (mycookie == 'true') {
-      $(this).prop('checked', true)
-      if ($(this).attr('name') == 'net-switch') {
-        netSelected = 1
-        block_explorer = block_explorer_beta
-      }
-      if ($(this).attr('name') == 'note-switch') {
-        interpretation = 1
-      }
-    }
-    else if (mycookie == 'false') {
-      $(this).prop('checked', false)
-      if ($(this).attr('name') == 'net-switch') {
-        netSelected = 0
-        block_explorer = block_explorer_main
-      }
-      if ($(this).attr('name') == 'note-switch') {
-        interpretation = 0
-      }
-    }
-  })
-  $('input[type=checkbox]').change(function() {
-    Cookies.set($(this).attr("name"), $(this).prop('checked'), {
-        path: '',
-        expires: 365
-    })
-  })
-
-  document.getElementById("info-button").addEventListener("click", function(e) {
-      var l = document.getElementById("info")
-      l.classList.toggle("hidden")
-      l = document.getElementById("play_button")
-      if (l) {
-        l.classList.toggle("hidden")
-      }
-      return e.preventDefault()
-
-      ga('send', 'event', 'buttton', 'click-info', 'info')
-  }),
-  document.getElementById("close-button").addEventListener("click", function(e) {
-    var l = document.getElementById("info")
-    l.classList.toggle("hidden")
-    l = document.getElementById("play_button")
-    if (l) {
-      l.classList.toggle("hidden")
-    }
-    return e.preventDefault()
-  })
-
-	//init()
-  var $start = document.querySelector('#play_button')
-	$(".play_button").show()
-	$(".play_button").click(function(){
-    ga('send', 'event', 'buttton', 'click-play', 'play')
-    Tone.start()
-		StartAudioContext(Tone.context, $start, () => {
-			$start.remove()
-			console.debug('AUDIO READY')
-		})
-		init()
-	})
-
-  $(".volume-chooser").on("input", ".volume", function(e){
-    volumeval = $(e.currentTarget).val()
-    Cookies.set("volume", volumeval, {
-        path: '',
-        expires: 365
-    })
-    if(!muted) {
-      var volume = Tone.Master;
-        volume.set("volume", -(40-volumeval));
-    }
-  })
-
-  // mute button
-  document.getElementById("speaker").addEventListener("click", function(e) {
-    ga('send', 'event', 'buttton', 'click-mute', 'mute')
-    this.classList.toggle('is-muted')
-    mute_sound()
-    Cookies.set("muted", muted, {
-        path: '',
-        expires: 365
-    })
-  })
-
-  //restore volume from cookie
-  var vol = Cookies.get('volume')
-  if(vol != undefined) {
-    $('.volume-chooser .volume').val(vol)
-  }
-
-  //restore mute state from cookie
-  var cookie_mute = Cookies.get('muted')
-  if(cookie_mute != undefined) {
-    if(cookie_mute == 'true') {
-      mute_state = true
-      document.getElementById("speaker").classList.toggle('is-muted')
-    }
-  }
-})
-
-function render() {
-    var delta = clock.getDelta()
-    renderer.clear()
-    composer.render(delta)
-    requestAnimationFrame( render )
-
-    //noise generator
-    noise_counter += 0.01;
-    customPass.uniforms["amount"].value = noise_counter;
-
-    TWEEN.update()
-}
-
-function on_window_resize() {
-    camera.left = window.innerWidth / - 2
-    camera.right = window.innerWidth / 2
-    camera.top = window.innerHeight / 2
-    camera.bottom = window.innerHeight / - 2
-
-    camera.updateProjectionMatrix()
-
-    renderer.setSize( window.innerWidth, window.innerHeight )
-}
-
-//setInterval(update_data(), delay)
-var blockSeq = 0
-var xCount = 0
 //play note
 async function schedule_next(){
   if (collected_blocks.length != 0) {
@@ -877,7 +712,7 @@ async function schedule_next(){
 		play_note(n,b,v, s, xCount, amount, type)
 
     // update stats
-    document.getElementById("current-hash").innerHTML = '<a target="_blank" href="' + block_explorer  + hash + '">' + hash + '</a> | ' + amount + ' | ' + type + ' ► Note: ' + n + " - " + b
+    document.getElementById("current-hash").innerHTML = '<a target="_blank" href="' + block_explorer  + hash + '">' + hash.substring(0,5) + '...' + hash.substring(59,64) + '</a> | ' + amount + ' | ' + type + ' ► Note: ' + n + " - " + b
 
   	if (xCount  < collected_blocks[blockSeq][0].length-1) {
       xCount++
@@ -889,7 +724,6 @@ async function schedule_next(){
   	} else {
       playing = false
   		blockSeq++
-      //console.log("Sequence:" + blockSeq + " / " + (collected_blocks.length))
 
       //clean up collected blocks if there are no queued
       if (collected_blocks.length == blockSeq) {
@@ -916,6 +750,9 @@ async function schedule_next(){
   }
 }
 
+/*
+  Check if new blocks have been saved in the queue to be played
+*/
 async function check_for_new_content() {
 	if (collected_blocks[blockSeq] !== undefined) {
 		if (collected_blocks[blockSeq][0].length > 0) {
@@ -931,13 +768,11 @@ async function check_for_new_content() {
         multiplier = 1
       }
       base_measure = base_measure_init * (1/multiplier)
-      //console.log("Base: " + base_measure)
 
       await sleep('1m')
       schedule_next()
 			//Tone.Transport.scheduleOnce(schedule_next, ("+1m"))
 		} else {
-			//update_transaction_display(collected_blocks[blockSeq][2][0])
 			blockSeq++
       await sleep('1m')
       check_for_new_content()
@@ -964,13 +799,47 @@ function play_note(n, b, v, s, x, a, t) {
 	}, n).start(Tone.now())
 }
 
-//melody interval
-setInterval(function() {
-  //only add a new melody if not currently playing or if the melody is full (this will make the music less repetitive)
-  if (!playing || (transactions.length - transactions_last) >= 64) {
-    define_content()
-  }
-}, melody_interval)
+/*
+  Hash interpreting into notes
+*/
+var mode = function mode(arr) {
+    return arr.reduce(function(current, item) {
+        var val = current.numMapping[item] = (current.numMapping[item] || 0) + 1
+        if (val > current.greatestFreq) {
+            current.greatestFreq = val
+            current.mode = item
+        }
+        return current
+    }, {mode: null, greatestFreq: -Infinity, numMapping: {}}, arr).mode
+}
+
+function add(string) {
+    string = string.split('')
+    var nums = []
+    for (var i = 0; i < string.length; i++) {
+        nums[i] =  parseInt(string[i],10)
+    }
+    return nums
+}
+
+// read data from websocket callback
+function processSocket(data) {
+  let res = JSON.parse(data)
+
+	var txData = {
+		"account": [res.data.account],
+		"hash": res.data.hash,
+		"amount": (res.data.amount / 1000000000000000000000000000000),
+    "subtype": res.data.subtype
+	}
+
+	//console.log(txData)
+  transactions.push(txData)
+
+  //randomize the amount on screen
+  text_generator(txData.amount, txData.hash, txData.subtype)
+  document.getElementById("current-queue").innerHTML = "Blocks Queued: " + (transactions.length-transactions_last) + " "
+}
 
 const mainSocketMessageListener = (event) => {
   if (netSelected == 0) {
@@ -1022,48 +891,139 @@ const betaSocketCloseListener = (event) => {
   socket_nano_beta.addEventListener('close', betaSocketCloseListener)
 }
 
-// read data from websocket callback
-function processSocket(data) {
-  let res = JSON.parse(data)
+//melody interval
+setInterval(function() {
+  //only add a new melody if not currently playing or if the melody is full (this will make the music less repetitive)
+  if (!playing || (transactions.length - transactions_last) >= 64) {
+    define_content()
+  }
+}, melody_interval)
 
-	var txData = {
-		"account": [res.data.account],
-		"hash": res.data.hash,
-		"amount": (res.data.amount / 1000000000000000000000000000000),
-    "subtype": res.data.subtype
-	}
+$(document).ready(function(){
+  //Switches
+  $('#net-switch').change(function() {
+    ga('send', 'event', 'buttton', 'click-net-switch', 'net-switch')
+     if($(this).is(":checked")) {
+       netSelected = 1
+       block_explorer = block_explorer_beta
+     }
+     else {
+       netSelected = 0
+       block_explorer = block_explorer_main
+     }
+  })
 
-	//console.log(txData)
-  transactions.push(txData)
-
-  //randomize the amount on screen
-  text_generator(txData.amount, txData.hash, txData.subtype)
-  document.getElementById("current-queue").innerHTML = "Blocks Queued: " + (transactions.length-transactions_last) + " "
-}
-
-var mode = function mode(arr) {
-    return arr.reduce(function(current, item) {
-        var val = current.numMapping[item] = (current.numMapping[item] || 0) + 1
-        if (val > current.greatestFreq) {
-            current.greatestFreq = val
-            current.mode = item
-        }
-        return current
-    }, {mode: null, greatestFreq: -Infinity, numMapping: {}}, arr).mode
-}
-
-function add(string) {
-    string = string.split('')
-    var nums = []
-    for (var i = 0; i < string.length; i++) {
-        nums[i] =  parseInt(string[i],10)
+  $('#note-switch').change(function() {
+    ga('send', 'event', 'buttton', 'click-note-switch', 'note-switch')
+    if($(this).is(":checked")) {
+      interpretation = 1
     }
-    return nums
-}
+    else {
+      interpretation = 0
+    }
+  });
 
-function SetToZero() {
-	sphere.scale.x = 0.001
-	sphere.scale.y = 0.001
-	sphere.scale.z = 0.001
-	sphere.material.opacity = 0
-}
+  //Handle automatic cookies for all checkboxes. Using js.cookie.js plugin
+  $('input[type=checkbox]').each(function() {
+    var mycookie = Cookies.get($(this).attr('name'))
+
+    if (mycookie == 'true') {
+      $(this).prop('checked', true)
+      if ($(this).attr('name') == 'net-switch') {
+        netSelected = 1
+        block_explorer = block_explorer_beta
+      }
+      if ($(this).attr('name') == 'note-switch') {
+        interpretation = 1
+      }
+    }
+    else if (mycookie == 'false') {
+      $(this).prop('checked', false)
+      if ($(this).attr('name') == 'net-switch') {
+        netSelected = 0
+        block_explorer = block_explorer_main
+      }
+      if ($(this).attr('name') == 'note-switch') {
+        interpretation = 0
+      }
+    }
+  })
+
+  $('input[type=checkbox]').change(function() {
+    Cookies.set($(this).attr("name"), $(this).prop('checked'), {
+        path: '',
+        expires: 365
+    })
+  })
+
+  document.getElementById("info-button").addEventListener("click", function(e) {
+      var l = document.getElementById("info")
+      l.classList.toggle("hidden")
+      l = document.getElementById("play_button")
+      if (l) {
+        l.classList.toggle("hidden")
+      }
+      return e.preventDefault()
+
+      ga('send', 'event', 'buttton', 'click-info', 'info')
+  }),
+  document.getElementById("close-button").addEventListener("click", function(e) {
+    var l = document.getElementById("info")
+    l.classList.toggle("hidden")
+    l = document.getElementById("play_button")
+    if (l) {
+      l.classList.toggle("hidden")
+    }
+    return e.preventDefault()
+  })
+
+  var $start = document.querySelector('#play_button')
+	$(".play_button").show()
+	$(".play_button").click(function(){
+    ga('send', 'event', 'buttton', 'click-play', 'play')
+    Tone.start()
+		StartAudioContext(Tone.context, $start, () => {
+			$start.remove()
+			console.debug('AUDIO READY')
+		})
+		init()
+	})
+
+  $(".volume-chooser").on("input", ".volume", function(e){
+    volumeval = $(e.currentTarget).val()
+    Cookies.set("volume", volumeval, {
+        path: '',
+        expires: 365
+    })
+    if(!muted) {
+      var volume = Tone.Master;
+        volume.set("volume", -(40-volumeval));
+    }
+  })
+
+  // mute button
+  document.getElementById("speaker").addEventListener("click", function(e) {
+    ga('send', 'event', 'buttton', 'click-mute', 'mute')
+    this.classList.toggle('is-muted')
+    mute_sound()
+    Cookies.set("muted", muted, {
+        path: '',
+        expires: 365
+    })
+  })
+
+  //restore volume from cookie
+  var vol = Cookies.get('volume')
+  if(vol != undefined) {
+    $('.volume-chooser .volume').val(vol)
+  }
+
+  //restore mute state from cookie
+  var cookie_mute = Cookies.get('muted')
+  if(cookie_mute != undefined) {
+    if(cookie_mute == 'true') {
+      mute_state = true
+      document.getElementById("speaker").classList.toggle('is-muted')
+    }
+  }
+})
