@@ -760,7 +760,6 @@ async function check_for_new_content() {
 		if (collected_blocks[blockSeq][0].length > 0) {
 			update_current_notes(Math.floor(Math.random() * chords.length))
 			xCount = 0
-      create_grid(collected_blocks[blockSeq])
       document.getElementById("current-queue").innerHTML = "Blocks Queued: " + (transactions.length-transactions_last) + " "
       document.getElementById("current-sequence").innerHTML = " Melody Sequence: " + (blockSeq+1) + " / " + (collected_blocks.length)
 
@@ -772,6 +771,7 @@ async function check_for_new_content() {
       base_measure = base_measure_init * (1/multiplier)
 
       await sleep('1m')
+      create_grid(collected_blocks[blockSeq])
       schedule_next()
 			//Tone.Transport.scheduleOnce(schedule_next, ("+1m"))
 		} else {
