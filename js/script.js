@@ -117,6 +117,7 @@ var reverb, feedbackDelay, feedbackDelay2, wider, eq, eq_synth, synth, polySynth
 
 function start_tone_stuff(){
   Tone.Master.mute = true //mute to avoid strange sound that kills the speaker
+  muted = true
 
   reverb = new Tone.Freeverb().toMaster()
 	reverb.dampening.value = 1000
@@ -126,7 +127,7 @@ function start_tone_stuff(){
 	feedbackDelay2 = new Tone.PingPongDelay("3n", .5).connect(reverb)
 
 	eq = new Tone.EQ3(2, -5, -15).connect(feedbackDelay2)
-  eq_synth = new Tone.EQ3(-5, -2, -4, 600, 2500).connect(feedbackDelay)
+  eq_synth = new Tone.EQ3(-7, -2, -4, 600, 2500).connect(feedbackDelay)
 
 	synth = new Tone.FMSynth().connect(eq_synth)
 	synth.set({
@@ -385,9 +386,11 @@ async function init() {
   //set mute state
   if (mute_state == true) {
     Tone.Master.mute = true
+    muted = true
   }
   else {
     Tone.Master.mute = false
+    muted = false
   }
 
   check_for_new_content()
@@ -658,7 +661,6 @@ function define_content() {
     var new_velocity = []
     var new_scale = []
     var transaction_info = []
-    var block_num = 0
 
     // pop old values if longer than 64
     while (transactions.length > 64) {
@@ -1025,5 +1027,13 @@ $(document).ready(function(){
       mute_state = true
       document.getElementById("speaker").classList.toggle('is-muted')
     }
+  }
+
+  //set mute state
+  if (mute_state == true) {
+    muted = true
+  }
+  else {
+    muted = false
   }
 })
