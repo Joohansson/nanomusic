@@ -13,22 +13,23 @@
  */
 
 var scene, camera, renderer, composer
-var geometry, material, mesh
 var started = false
-var sphere
 var prior_block_id
 var beat_lengths = ["1n", "1n", "2n", "4n", "2n", "4n", "4n", "8n"]
 var collected_blocks = []
 var current_colors = []
 var current_colors_send = []
-var last_block_played
 var mute = false
 var clock = new THREE.Clock()
+var notes_array = []
+var cubes = null
 const url_nano_main = "wss://ws.nanocrawler.cc"
 const url_nano_beta = "wss://beta.ws.nanocrawler.cc"
 const block_explorer_main = "https://nanocrawler.cc/explorer/block/"
 const block_explorer_beta = "https://beta.nanocrawler.cc/explorer/block/"
 var block_explorer = block_explorer_main
+const websocket_nc_main = false //custom setting to use the node websocket interface for nanocrawler
+const websocket_nc_beta = true //custom setting to use the node websocket interface for nanocrawler
 
 var socket_nano_main
 var socket_nano_beta
@@ -49,7 +50,10 @@ const base_measure_init = 2500 //length in ms of one measure (1m) when not using
 var base_measure = base_measure_init
 var blockSeq = 0 //current melody position
 var xCount = 0 //current note position in melody
-
+var new_melody = false //indicate new melody is playing
+var nano_sent = 0 //total sent since start
+var nano_received = 0 //total received since start
+var resize_ordered = false //indicate for next melody about new window size
 var chords = [
 ["B1", "F#1", "F#2", "B2", "F#3", "B3", "D3", "A3", "D4", "E4", "A4"],
 ["B2", "F#2", "B3", "F#3", "D2", "E2", "A2", "D3", "E3", "A3", "D4"],
@@ -89,7 +93,7 @@ var tick = 0,
   world_height = 250,
   tile_width = 50,
   tile_height = 50,
-  ran =64,
+  ran = 64,
   spotLight, ambient_light, plane,
 
   FOV = 200
@@ -113,23 +117,44 @@ function sleep(tone_delay) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-var reverb, feedbackDelay, feedbackDelay2, wider, eq, eq_synth, synth, polySynth, noise, autoFilter
+function sleep_simple(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+var reverb, reverb2, feedbackDelay, feedbackDelay2, wider, eq_back, eq_synth, dist, tremolo, lowPass, lowPass2, highPass, highPass2, synth, polySynth, noise, autoFilter
 
 function start_tone_stuff(){
   Tone.Master.mute = true //mute to avoid strange sound that kills the speaker
   muted = true
 
-  reverb = new Tone.Freeverb().toMaster()
-	reverb.dampening.value = 1000
+  reverb = new Tone.Reverb(1.5).toMaster()
+  reverb.wet.value = 0.5;
 	feedbackDelay = new Tone.FeedbackDelay("6n", .75).toMaster()
 
 	//wider = new Tone.StereoWidener(1).connect(reverb) //this is making a heavy click sound when initialized
-	feedbackDelay2 = new Tone.PingPongDelay("3n", .5).connect(reverb)
+  feedbackDelay2 = new Tone.PingPongDelay("3n", .5).connect(reverb)
 
-	eq = new Tone.EQ3(2, -5, -15).connect(feedbackDelay2)
-  eq_synth = new Tone.EQ3(-7, -2, -4, 600, 2500).connect(feedbackDelay)
+	eq_back = new Tone.EQ3(2, -5, -15)
+  eq_synth = new Tone.EQ3(-8, -2, -6, 600, 2000)
+  dist = new Tone.Distortion(0.05)
+  lowPass = new Tone.Filter({
+			frequency: 6000,
+      type: 'lowpass',
+	})
+  highPass = new Tone.Filter({
+			frequency: 250,
+      type: 'highpass',
+	})
+  lowPass2 = new Tone.Filter({
+			frequency: 2000,
+      type: 'lowpass',
+	})
+  highPass2 = new Tone.Filter({
+			frequency: 100,
+      type: 'highpass',
+	})
 
-	synth = new Tone.FMSynth().connect(eq_synth)
+	synth = new Tone.FMSynth().chain(dist, eq_synth, lowPass, highPass, feedbackDelay)
 	synth.set({
 		harmonicity:3,
 		modulationIndex:3.5,
@@ -138,7 +163,7 @@ function start_tone_stuff(){
 			type:"sine"
 		},
 		envelope:{
-			attack:0.001,
+			attack:0.01,
 			decay:0.01,
 			sustain:1,
 			release:0.75,
@@ -152,10 +177,10 @@ function start_tone_stuff(){
 			sustain:1,
 			release:0.5
 	}})
-	synth.volume.value = -5
-	feedbackDelay.wet.value = .5
+	synth.volume.value = -4
+	feedbackDelay.wet.value = .4
 
-	polySynth = new Tone.PolySynth(4, Tone.MonoSynth).connect(eq)
+	polySynth = new Tone.PolySynth(4, Tone.MonoSynth).chain(eq_back, lowPass2, highPass2, feedbackDelay2)
 	polySynth.set({
     "oscillator" : "PWM",
     "envelope" : {
@@ -165,10 +190,10 @@ function start_tone_stuff(){
         "releaseCurve" : "exponential"
     }
 	})
-	polySynth.volume.value = -63
+	polySynth.volume.value = -65
 
 	var loop2 = new Tone.Loop(function(time){
-	    polySynth.triggerAttackRelease(current_notes[Math.floor(Math.random() * (current_notes.length - 4))], "2m")
+	    polySynth.triggerAttackRelease(current_notes[Math.floor(Math.random() * (current_notes.length - 4))], "2m", "+0.05")
 	}, beat_lengths[Math.floor(Math.random() * beat_lengths.length)]).start()
 
 	noise = new Tone.Noise("white").start()
@@ -179,14 +204,104 @@ function start_tone_stuff(){
 		"frequency" : "10m",
 		"min" : 300,
 		"max" : 1000
-	}).connect(reverb)
+	})
+  let lowPass3 = new Tone.Filter({
+			frequency: 2000,
+      type: 'lowpass',
+	})
 
 	//connect the noise
-	noise.connect(autoFilter)
+	noise.chain(lowPass3, autoFilter, reverb)
 	//start the autofilter LFO
 	autoFilter.start()
 
-	Tone.Transport.start("+0.01")
+  Tone.context.latencyHint = 'playback' //prioritizes sustained playback
+	Tone.Transport.start("+0.1")
+}
+
+function start_rendering_stuff() {
+  var e = document.createElement("canvas")
+  e = document.getElementById("canvas")
+  console.log("init called ")
+  e.width = 16
+  e.height = 16
+  camera = new THREE.OrthographicCamera( viewport_width, viewport_height, viewport_width, viewport_height, 1, 1000 )
+  camera.left = window.innerWidth / - 2
+  camera.right = window.innerWidth / 2
+  camera.top = window.innerHeight / 2
+  camera.bottom = window.innerHeight / - 2
+
+  camera.updateProjectionMatrix()
+  scene = new THREE.Scene()
+  scene.add(camera)
+  renderer = new THREE.WebGLRenderer( {canvas: e,alpha: true, antialias:true} )
+  var t = e.getContext("2d")
+  e = document.getElementById("canvas")
+
+  for (var p = document.getElementById("address-info"), b = document.getElementsByClassName("address-button"), E = 0; E < b.length; E++)
+    b[E].addEventListener("click", function(e) {
+        return e.preventDefault(),
+        p.classList.toggle("hidden"),
+        !1
+    })
+  window.addEventListener("resize", on_window_resize, !1)
+
+  renderer.setClearColor(0x131519)
+  renderer.setPixelRatio( window.devicePixelRatio )
+  renderer.setSize(window.innerWidth, window.innerHeight)
+  renderer.autoClear = false
+
+  //render pass
+  var renderPass = new THREE.RenderPass(scene, camera)
+  composer = new THREE.EffectComposer(renderer)
+  composer.addPass(renderPass)
+
+  //bloom pass
+  var bloomPass = new THREE.BloomPass(0.9,25,7,128)
+  composer.addPass(bloomPass)
+  bloomPass.clear = true
+
+  //old film pass (not currently used (0.0) because of a bug where it will look bad after a while)
+  //var effectFilm = new THREE.FilmPass(0.0, .01, 648, false)
+  //effectFilm.renderToScreen = true
+  //composer.addPass(effectFilm)
+
+  //custom shader pass for noise
+  var vertShader = document.getElementById('vertexShader').textContent;
+  var fragShader = document.getElementById('fragmentShader').textContent;
+  var noiseEffect = {
+    uniforms: {
+      "tDiffuse": { value: null },
+      "amount": { value: noise_counter }
+    },
+    vertexShader: vertShader,
+    fragmentShader: fragShader
+  }
+
+  noise_pass = new THREE.ShaderPass(noiseEffect);
+  noise_pass.renderToScreen = true;
+  composer.addPass(noise_pass);
+
+  /*
+  var mesh = new THREE.SphereGeometry(300,300,12)
+  var vat2 = new THREE.MeshBasicMaterial()
+  sphere = new THREE.Mesh(mesh, vat2)
+  sphere.material.opacity = 0
+  sphere.scale.x = 0.001
+  sphere.scale.y = 0.001
+  sphere.scale.z = 0.001
+  */
+  //spotLight = new THREE.DirectionalLight( 0x0066f0 ),
+  cubes = new THREE.Object3D()
+
+  camera.position.set( 0, 0, 90 )
+  camera.lookAt( scene.position )
+
+  //scene.add(sphere)
+  scene.add(cubes)
+  //scene.add(spotLight)
+
+  render()
 }
 
 function update_current_notes(xx) {
@@ -206,7 +321,7 @@ function dummy_notes() {
   transactions = []
   transactions_last = 0
   hashes = [
-    "000000000000000000000000000000000000000000000000000000000000000",
+    "0000000000000000000000000000000000000000000000000000000000000000",
     "1111111111111111111111111111111111111111111111111111111111111111",
     "2222222222222222222222222222222222222222222222222222222222222222",
     "3333333333333333333333333333333333333333333333333333333333333333",
@@ -224,6 +339,25 @@ function dummy_notes() {
   }
   define_content()
   //transactions = [] //if not using this, the new blocks will append to the dummy melody
+}
+
+/*
+Less memory invasive function than calling setInterval() over and over again
+*/
+async function fade_loop(el, fade_delay) {
+  if (!el.style.opacity) {
+    el.style.opacity = 0.8
+  }
+  if (el.style.opacity > 0.025) {
+    //increase fadeout time while the block queue grows, to mitigate the browser from overloading during high traffic
+    el.style.opacity -= (0.025 + (transactions.length-transactions_last) / 10000)
+    //setTimeout(fade_loop, 150 + fade_delay, el, fade_delay)
+    await sleep_simple(150 + fade_delay)
+    fade_loop(el, fade_delay)
+  }
+  else {
+    el.remove()
+  }
 }
 
 /*
@@ -279,105 +413,28 @@ function text_generator(amount, hash, type) {
   elem.classList.add("floating-text")
 
   //fadeout effect
-  var fadeEffect = setInterval(function () {
-      if (!elem.style.opacity) {
-          elem.style.opacity = 0.8
-      }
-      if (elem.style.opacity > 0.025) {
-          //increase fadeout time while the block queue grows, to mitigate the browser from overloading during high traffic
-          elem.style.opacity -= (0.025 + (transactions.length-transactions_last) / 10000)
-      } else {
-          elem.remove()
-          clearInterval(fadeEffect)
-      }
-  }, 150 + fade_delay)
+  fade_loop(elem, fade_delay)
+
   document.body.appendChild(elem)
+}
+
+//Thousand separator
+function add_commas(nStr) {
+  nStr += '';
+  var x = nStr.split('.');
+  var x1 = x[0];
+  var x2 = x.length > 1 ? '.' + x[1] : '';
+  var rgx = /(\d+)(\d{3})/;
+  while (rgx.test(x1)) {
+      x1 = x1.replace(rgx, '$1' + ',' + '$2');
+  }
+  return x1 + x2;
 }
 
 async function init() {
   has_init = true
   start_tone_stuff()
-  var e = document.createElement("canvas")
-  e = document.getElementById("canvas")
-  console.log("init called ")
-  e.width = 16
-  e.height = 16
-  camera = new THREE.OrthographicCamera( viewport_width, viewport_height, viewport_width, viewport_height, 1, 1000 )
-  camera.left = window.innerWidth / - 2
-  camera.right = window.innerWidth / 2
-  camera.top = window.innerHeight / 2
-  camera.bottom = window.innerHeight / - 2
-
-  camera.updateProjectionMatrix()
-  scene = new THREE.Scene()
-  scene.add(camera)
-  renderer = new THREE.WebGLRenderer( {canvas: e,alpha: true, antialias:true} )
-  var t = e.getContext("2d")
-  e = document.getElementById("canvas")
-
-  for (var p = document.getElementById("address-info"), b = document.getElementsByClassName("address-button"), E = 0; E < b.length; E++)
-    b[E].addEventListener("click", function(e) {
-        return e.preventDefault(),
-        p.classList.toggle("hidden"),
-        !1
-    })
-  window.addEventListener("resize", on_window_resize, !1)
-
-  renderer.setClearColor(0x000000)
-  renderer.setPixelRatio( window.devicePixelRatio )
-  renderer.setSize(window.innerWidth, window.innerHeight)
-  renderer.autoClear = false
-
-  //render pass
-  var renderPass = new THREE.RenderPass(scene, camera)
-  composer = new THREE.EffectComposer(renderer)
-  composer.addPass(renderPass)
-
-  //bloom pass
-  var bloomPass = new THREE.BloomPass(0.9,25,7,128)
-  composer.addPass(bloomPass)
-  bloomPass.clear = true
-
-  //old film pass (not currently used (0.0) because of a bug where it will look bad after a while)
-  //still need to have it or it will not render at all?
-  var effectFilm = new THREE.FilmPass(0.0, .01, 648, false)
-  //effectFilm.renderToScreen = true
-  composer.addPass(effectFilm)
-
-  //custom shader pass for noise
-  var vertShader = document.getElementById('vertexShader').textContent;
-  var fragShader = document.getElementById('fragmentShader').textContent;
-  var noiseEffect = {
-    uniforms: {
-      "tDiffuse": { value: null },
-      "amount": { value: noise_counter }
-    },
-    vertexShader: vertShader,
-    fragmentShader: fragShader
-  }
-
-  noise_pass = new THREE.ShaderPass(noiseEffect);
-  noise_pass.renderToScreen = true;
-  composer.addPass(noise_pass);
-
-  var mesh = new THREE.SphereGeometry(300,300,12)
-  var vat2 = new THREE.MeshBasicMaterial()
-  sphere = new THREE.Mesh(mesh, vat2)
-  sphere.material.opacity = 0
-  sphere.scale.x = 0.001
-  sphere.scale.y = 0.001
-  sphere.scale.z = 0.001
-  spotLight = new THREE.DirectionalLight( 0x0066f0 ),
-  cubes = new THREE.Object3D()
-
-  camera.position.set( 0, 0, 90 )
-  camera.lookAt( scene.position )
-
-  scene.add(sphere)
-  scene.add( cubes )
-  scene.add( spotLight )
-
-  render()
+  start_rendering_stuff()
 
   //play dummy notes to show visitor it's alive
   dummy_notes()
@@ -392,31 +449,29 @@ async function init() {
     Tone.Master.mute = false
     muted = false
   }
-
+  create_grid(64)
   check_for_new_content()
   mainSocketCloseListener()
   betaSocketCloseListener()
 }
 
-function trigger_light(x, amount, hasPitch, scale, type) {
+window.onresize = function(event) {
+  resize_ordered = true
+}
+
+/*
+Draw the light box for each note
+*/
+function trigger_light(x, amount, type) {
   var ran_cube = cubes.children[ (cubes.children.length - 1) -  x]
-  var new_col = interpret_cube_color(amount,type)
-  ran_cube.material.color.setHex( new_col)
-  if (hasPitch){
-      ran_cube.material.opacity= 1
-      tween1 = new TWEEN.Tween( ran_cube.material )
-          .to( {opacity: 0 }, 12000 )
-          .repeat( 0 )
-          .easing( create_step_function(64) )
-          .start()
-  } else {
-      ran_cube.material.opacity= .1
-      tween1 = new TWEEN.Tween( ran_cube.material )
-          .to( {opacity: 0 }, 12000 )
-          .repeat( 0 )
-          .easing(  create_step_function(12)  )
-          .start()
-  }
+  ran_cube.material.color.setHex(interpret_cube_color(amount,type))
+  ran_cube.material.opacity= 1
+  //tween object is supposed to remove itself after it has finished, no memory cleanup needed
+  new TWEEN.Tween( ran_cube.material )
+      .to( {opacity: 0 }, 12000 )
+      .repeat( 0 )
+      .easing( create_step_function(64) )
+      .start()
 }
 
 function create_step_function(numSteps) {
@@ -427,7 +482,7 @@ function create_step_function(numSteps) {
 
 function interpret_amount_beat(val) {
 	if (val < .01) {
-		return "32n"
+		return "28n"
 	} else if ((val >= .01) && (val < 0.1)) {
 		return "16n"
 	} else if ((val >= 0.1) && (val < 1)) {
@@ -582,32 +637,40 @@ function interpret_amount_scale(val){
   Creates the background bars synced with the melody
 */
 function create_grid(content) {
+  //reset objects and clean up references in memory
+  while (cubes.children.length > 256) {
+    cubes.children[0].geometry.dispose()
+    cubes.children[0].material.dispose()
+    //cubes.children[0] = undefined
+    cubes.remove(cubes.children[0])
+  }
+
 	var framedWidth = (window.innerWidth) * .9 //frame amount
-    var transaxx = content[0].length
-    var fixedWidthOfOneUnit = framedWidth / transaxx
-    if (fixedWidthOfOneUnit > 150) {
-    	fixedWidthOfOneUnit = 150
-    }
-    var totalWidth =  fixedWidthOfOneUnit * transaxx
-    var the_floor = ((totalWidth) * .5) - (fixedWidthOfOneUnit * .5)
+  //var transaxx = content[0].length
+  var transaxx = content
+  var fixedWidthOfOneUnit = framedWidth / transaxx
+  if (fixedWidthOfOneUnit > 150) {
+  	fixedWidthOfOneUnit = 150
+  }
+  var totalWidth =  fixedWidthOfOneUnit * transaxx
+  var the_floor = ((totalWidth) * .5) - (fixedWidthOfOneUnit * .5)
 
-    var geometry = new THREE.BoxGeometry(fixedWidthOfOneUnit, window.innerHeight, 50)
+  var geometry = new THREE.BoxGeometry(fixedWidthOfOneUnit, window.innerHeight, 50)
 
-    //clean previous cube children or it will build up and eventually freeze the browser
-    cubes.children = []
-
-    for (var x = 0; x < transaxx; x++) {
-        material = new THREE.MeshBasicMaterial({})
-        material.color.setHex (0x00ffff)
-        material.transparent = true
-        material.opacity = 0
-        var cube = new THREE.Mesh(geometry, material)
-        cube.scale.z = 1
-        cube.position.x = the_floor - (fixedWidthOfOneUnit * x)
-        cube.position.y = 0
-        cube.position.z = cube.geometry.parameters.depth / 2 * cube.scale.z
-        cubes.add(cube)
-    }
+  for (var x = 0; x < transaxx; x++) {
+      var material = new THREE.MeshBasicMaterial({})
+      material.color.setHex (0x00ffff)
+      material.transparent = true
+      material.opacity = 0
+      var cube = new THREE.Mesh(geometry, material)
+      cube.scale.z = 1
+      cube.position.x = the_floor - (fixedWidthOfOneUnit * x)
+      cube.position.y = 0
+      cube.position.z = cube.geometry.parameters.depth / 2 * cube.scale.z
+      cubes.add(cube)
+      material.dispose();
+  }
+  geometry.dispose();
 }
 
 function render() {
@@ -617,8 +680,11 @@ function render() {
     requestAnimationFrame( render )
 
     //noise generator
-    noise_counter += 0.01;
-    noise_pass.uniforms["amount"].value = noise_counter;
+    noise_counter += 0.01
+    noise_pass.uniforms["amount"].value = noise_counter
+    if (noise_counter > 1000) {
+      noise_counter = 0.0
+    }
 
     TWEEN.update()
 }
@@ -698,10 +764,7 @@ function define_content() {
 async function schedule_next(){
   if (collected_blocks.length != 0) {
     playing = true
-    if (xCount == 0 ) {
-    	var col = new THREE.Color(current_colors[0])
-    	renderer.setClearColor(col, .25)
-    }
+
   	var n = collected_blocks[blockSeq][0][xCount]
   	var b = collected_blocks[blockSeq][1][xCount]
   	var v = collected_blocks[blockSeq][3][xCount]
@@ -711,10 +774,7 @@ async function schedule_next(){
     let hash = collected_blocks[blockSeq][2][xCount][0]
     let amount = collected_blocks[blockSeq][2][xCount][1]
     let type = collected_blocks[blockSeq][2][xCount][2]
-		play_note(n,b,v, s, xCount, amount, type)
-
-    // update stats
-    document.getElementById("current-hash").innerHTML = '<a target="_blank" href="' + block_explorer  + hash + '">' + hash.substring(0,5) + '...' + hash.substring(59,64) + '</a> | ' + amount + ' | ' + type + ' ► Note: ' + n + " - " + b
+		play_note(n,b,v, s, xCount, amount, type, hash)
 
   	if (xCount  < collected_blocks[blockSeq][0].length-1) {
       xCount++
@@ -760,8 +820,10 @@ async function check_for_new_content() {
 		if (collected_blocks[blockSeq][0].length > 0) {
 			update_current_notes(Math.floor(Math.random() * chords.length))
 			xCount = 0
-      document.getElementById("current-queue").innerHTML = "Blocks Queued: " + (transactions.length-transactions_last) + " "
-      document.getElementById("current-sequence").innerHTML = " Melody Sequence: " + (blockSeq+1) + " / " + (collected_blocks.length)
+      new_melody = true
+
+      document.getElementById("current-queue").innerHTML = 'Blocks Queued: <mark class="blue">' + (transactions.length-transactions_last) + '</mark> '
+      document.getElementById("current-sequence").innerHTML = ' Melody Sequence: <mark class="blue">' + (blockSeq+1) + '</mark> / <mark class="blue">' + (collected_blocks.length) + '</mark>'
 
       //increase base melody speed if lagging behind on blocks
       var multiplier = (collected_blocks.length - (blockSeq+1)) * 0.2
@@ -771,7 +833,12 @@ async function check_for_new_content() {
       base_measure = base_measure_init * (1/multiplier)
 
       await sleep('1m')
-      create_grid(collected_blocks[blockSeq])
+      //create_grid(collected_blocks[blockSeq])
+      //only create new grid if the window size has changed
+      if (resize_ordered) {
+        resize_ordered = false
+        create_grid(64)
+      }
       schedule_next()
 			//Tone.Transport.scheduleOnce(schedule_next, ("+1m"))
 		} else {
@@ -794,11 +861,30 @@ async function check_for_new_content() {
 }
 
 //const now = Tone.now()
-function play_note(n, b, v, s, x, a, t) {
-	var note = new Tone.Event(function(b, n){
-		synth.triggerAttackRelease(n, "4n", b, .5)
-		trigger_light(x, a, true, s, t)
-	}, n).start(Tone.now())
+function play_note(n, b, v, s, x, a, t, h) {
+  notes_array.push(new Tone.Event(function(time, pitch){
+    //this should be in the draw schedule for perfect visual sync but then the music stops when switching tab..
+    synth.triggerAttackRelease(pitch, "4n", time, .5, "+0.05")
+
+    Tone.Draw.schedule(function(){
+		//this callback is invoked from a requestAnimationFrame
+		//and will be invoked close to AudioContext time
+    if (new_melody) {
+      new_melody = false
+    	var col = new THREE.Color(current_colors[0])
+    	renderer.setClearColor(col, .25)
+    }
+    // update stats
+    document.getElementById("current-hash").innerHTML = '<a target="_blank" href="' + block_explorer  + h + '">' + h.substring(0,5) + '...' + h.substring(59,64) + '</a> | ' + a + ' | ' + t + ' ► Note: ' + n + " - " + b
+		trigger_light(x, a, t)
+	  }, time) //use AudioContext time of the event
+	}, n).start(Tone.now()))
+
+  //allow up to 64 notes to be played simulatenously before releasing them from memory
+  while (notes_array.length > 64) {
+    notes_array[0].stop("1m")
+    notes_array.shift()
+  }
 }
 
 /*
@@ -825,42 +911,46 @@ function add(string) {
 }
 
 // read data from websocket callback
-function processSocket(data) {
+function processSocket(data, nanocrawler) {
   let res = JSON.parse(data)
 
-	var txData = {
-		"account": [res.data.account],
-		"hash": res.data.hash,
-		"amount": (res.data.amount / 1000000000000000000000000000000),
-    "subtype": res.data.subtype
-	}
+  if (nanocrawler) {
+    var txData = {
+  		"account": [res.data.account],
+  		"hash": res.data.hash,
+  		"amount": (res.data.amount / 1000000000000000000000000000000),
+      "subtype": res.data.subtype
+  	}
+  }
+  else {
+    var txData = {
+  		"account": [res.message.account],
+  		"hash": res.message.hash,
+  		"amount": (res.message.amount / 1000000000000000000000000000000),
+      "subtype": res.message.block.subtype
+  	}
+  }
+
+  //increase sent / received
+  if (txData.subtype == "send") {
+    nano_sent += txData.amount
+  }
+  else if (txData.subtype == "receive") {
+    nano_received += txData.amount
+  }
 
 	//console.log(txData)
   transactions.push(txData)
 
   //randomize the amount on screen
   text_generator(txData.amount, txData.hash, txData.subtype)
-  document.getElementById("current-queue").innerHTML = "Blocks Queued: " + (transactions.length-transactions_last) + " "
+  document.getElementById("current-queue").innerHTML = 'Blocks Queued: <mark class="blue">' + (transactions.length-transactions_last) + '</mark> '
+  document.getElementById("current-tx").innerHTML = ' Total Sent / Received: <mark class="blue">' + add_commas(nano_sent.toFixed(4)) + '</mark> / <mark class="blue">' + add_commas(nano_received.toFixed(4)) + '</mark>'
 }
 
-const mainSocketMessageListener = (event) => {
-  if (netSelected == 0) {
-    processSocket(event.data)
-  }
-}
-
-const mainSocketOpenListener = (event) => {
-  console.log("Websocket main opened")
-	socket_nano_main.send(JSON.stringify({
-    event: "subscribe",
-    data: ["all"]
-  }))
-}
-
-const mainSocketCloseListener = (event) => {
-  if (socket_nano_main) {
-    console.error('Main socket disconnected.')
-    ga('send', 'event', 'websocket-disconnect', 'main', 'main')
+async function socket_sleep_main(wait) {
+  if (wait) {
+    await sleep_simple(10000)
   }
   socket_nano_main = new WebSocket(url_nano_main)
   socket_nano_main.addEventListener('open', mainSocketOpenListener)
@@ -868,29 +958,84 @@ const mainSocketCloseListener = (event) => {
   socket_nano_main.addEventListener('close', mainSocketCloseListener)
 }
 
+async function socket_sleep_beta(wait) {
+  if (wait) {
+    await sleep_simple(10000)
+  }
+  socket_nano_beta = new WebSocket(url_nano_beta)
+  socket_nano_beta.addEventListener('open', betaSocketOpenListener)
+  socket_nano_beta.addEventListener('message', betaSocketMessageListener)
+  socket_nano_beta.addEventListener('close', betaSocketCloseListener)
+}
+
+const mainSocketMessageListener = (event) => {
+  if (netSelected == 0) {
+    processSocket(event.data, websocket_nc_main)
+  }
+}
+
+const mainSocketOpenListener = (event) => {
+  console.log("Websocket main opened")
+  if (websocket_nc_main) {
+    //Nanocrawler interface
+  	socket_nano_main.send(JSON.stringify({
+      event: "subscribe",
+      data: ["all"]
+    }))
+  }
+  else {
+    //Node default interface
+    socket_nano_main.send(JSON.stringify({
+      action: "subscribe",
+      topic: "confirmation"
+    }))
+  }
+}
+
+const mainSocketCloseListener = (event) => {
+  if (socket_nano_main) {
+    console.error('Main socket disconnected.')
+    ga('send', 'event', 'websocket-disconnect', 'main', 'main')
+    socket_sleep_main(true)
+  }
+  else {
+    socket_sleep_main(false)
+  }
+}
+
 const betaSocketMessageListener = (event) => {
   if (netSelected == 1) {
-    processSocket(event.data)
+    processSocket(event.data, websocket_nc_beta)
   }
 }
 
 const betaSocketOpenListener = (event) => {
   console.log("Websocket beta opened")
-	socket_nano_beta.send(JSON.stringify({
-    event: "subscribe",
-    data: ["all"]
-  }))
+  if (websocket_nc_beta) {
+    //Nanocrawler interface
+  	socket_nano_beta.send(JSON.stringify({
+      event: "subscribe",
+      data: ["all"]
+    }))
+  }
+  else {
+    //Node default interface
+    socket_nano_beta.send(JSON.stringify({
+      action: "subscribe",
+      topic: "confirmation"
+    }))
+  }
 }
 
 const betaSocketCloseListener = (event) => {
   if (socket_nano_beta) {
     console.error('Beta socket disconnected.')
     ga('send', 'event', 'websocket-disconnect', 'main', 'main')
+    socket_sleep_beta(true)
   }
-  socket_nano_beta = new WebSocket(url_nano_beta)
-  socket_nano_beta.addEventListener('open', betaSocketOpenListener)
-  socket_nano_beta.addEventListener('message', betaSocketMessageListener)
-  socket_nano_beta.addEventListener('close', betaSocketCloseListener)
+  else {
+    socket_sleep_beta(false)
+  }
 }
 
 //melody interval
@@ -913,6 +1058,8 @@ $(document).ready(function(){
        netSelected = 0
        block_explorer = block_explorer_main
      }
+     nano_sent = 0
+     nano_received = 0
   })
 
   $('#note-switch').change(function() {
@@ -986,7 +1133,7 @@ $(document).ready(function(){
     Tone.start()
 		StartAudioContext(Tone.context, $start, () => {
 			$start.remove()
-			console.debug('AUDIO READY')
+			console.log('AUDIO READY')
 		})
 		init()
 	})
