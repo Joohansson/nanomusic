@@ -30,7 +30,7 @@ const block_explorer_main = "https://nanocrawler.cc/explorer/block/"
 const block_explorer_beta = "https://b.repnode.org/block/"
 var block_explorer = block_explorer_main
 const websocket_nc_main = false //custom setting to use the node websocket interface for nanocrawler
-const websocket_nc_beta = true //custom setting to use the node websocket interface for nanocrawler
+const websocket_nc_beta = false //custom setting to use the node websocket interface for nanocrawler
 
 var socket_nano_main
 var socket_nano_beta
