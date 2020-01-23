@@ -31,6 +31,8 @@ const block_explorer_beta = "https://b.repnode.org/block/"
 var block_explorer = block_explorer_main
 const websocket_nc_main = false //custom setting to use the node websocket interface for nanocrawler
 const websocket_nc_beta = false //custom setting to use the node websocket interface for nanocrawler
+var betaWebsocketOffline = false //indicate offline state
+var mainWebsocketOffline = false //indicate offline state
 
 var socket_nano_main
 var socket_nano_beta
@@ -949,22 +951,20 @@ function processSocket(data, nanocrawler) {
   document.getElementById("current-tx").innerHTML = ' Total Sent / Received: <mark class="blue">' + add_commas(nano_sent.toFixed(4)) + '</mark> / <mark class="blue">' + add_commas(nano_received.toFixed(4)) + '</mark>'
 }
 
-async function socket_sleep_main(wait) {
-  if (wait) {
-    await sleep_simple(10000)
-  }
+async function socket_sleep_main(sleep=5000) {
+  await sleep_simple(sleep)
   socket_nano_main = new WebSocket(url_nano_main)
   socket_nano_main.addEventListener('open', mainSocketOpenListener)
+  socket_nano_beta.addEventListener('error', mainSocketErrorListener)
   socket_nano_main.addEventListener('message', mainSocketMessageListener)
   socket_nano_main.addEventListener('close', mainSocketCloseListener)
 }
 
-async function socket_sleep_beta(wait) {
-  if (wait) {
-    await sleep_simple(10000)
-  }
+async function socket_sleep_beta(sleep=5000) {
+  await sleep_simple(sleep)
   socket_nano_beta = new WebSocket(url_nano_beta)
   socket_nano_beta.addEventListener('open', betaSocketOpenListener)
+  socket_nano_beta.addEventListener('error', betaSocketErrorListener)
   socket_nano_beta.addEventListener('message', betaSocketMessageListener)
   socket_nano_beta.addEventListener('close', betaSocketCloseListener)
 }
@@ -993,14 +993,27 @@ const mainSocketOpenListener = (event) => {
   }
 }
 
+const mainSocketErrorListener = (event) => {
+  console.error("Main websocket looks offline. Please try again later.")
+  ga('send', 'event', 'websocket-error', 'main', 'main')
+  mainWebsocketOffline = true
+}
+
 const mainSocketCloseListener = (event) => {
   if (socket_nano_main) {
-    console.error('Main socket disconnected.')
+    console.error('Main socket disconnected due to inactivity.')
     ga('send', 'event', 'websocket-disconnect', 'main', 'main')
-    socket_sleep_main(true)
+    // if socket offline, try again in 5min
+    if (mainWebsocketOffline) {
+      socket_sleep_main(300000)
+    }
+    // or in one second
+    else {
+      socket_sleep_main(1000)
+    }
   }
   else {
-    socket_sleep_main(false)
+    socket_sleep_main(1000)
   }
 }
 
@@ -1028,14 +1041,27 @@ const betaSocketOpenListener = (event) => {
   }
 }
 
+const betaSocketErrorListener = (event) => {
+  console.error("Beta websocket looks offline. Please try again later.")
+  ga('send', 'event', 'websocket-error', 'beta', 'beta')
+  betaWebsocketOffline = true
+}
+
 const betaSocketCloseListener = (event) => {
   if (socket_nano_beta) {
-    console.error('Beta socket disconnected.')
-    ga('send', 'event', 'websocket-disconnect', 'main', 'main')
-    socket_sleep_beta(true)
+    console.error('Beta socket disconnected due to inactivity.')
+    ga('send', 'event', 'websocket-disconnect', 'beta', 'betea')
+    // if socket offline, try again in 5min
+    if (betaWebsocketOffline) {
+      socket_sleep_beta(300000)
+    }
+    // or in one second
+    else {
+      socket_sleep_beta(1000)
+    }
   }
   else {
-    socket_sleep_beta(false)
+    socket_sleep_beta(1000)
   }
 }
 
