@@ -955,7 +955,7 @@ async function socket_sleep_main(sleep=5000) {
   await sleep_simple(sleep)
   socket_nano_main = new WebSocket(url_nano_main)
   socket_nano_main.addEventListener('open', mainSocketOpenListener)
-  socket_nano_beta.addEventListener('error', mainSocketErrorListener)
+  socket_nano_main.addEventListener('error', mainSocketErrorListener)
   socket_nano_main.addEventListener('message', mainSocketMessageListener)
   socket_nano_main.addEventListener('close', mainSocketCloseListener)
 }
